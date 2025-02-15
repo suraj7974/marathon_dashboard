@@ -6,4 +6,7 @@ export interface Participant {
   mobile: string;
   payment_status: string;
   identification_number: string;
+  city: string;
+  race_categories: string;
+  t_shirt_size: string;
 }

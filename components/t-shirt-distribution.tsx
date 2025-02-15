@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Alert, AlertDescription } from "../components/ui/alert";
-import { Search, User, Calendar, Mail, Phone, CreditCard } from "lucide-react";
+import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, Shirt } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 
@@ -57,14 +57,14 @@ const TShirtDistributionDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
-        <Card className="w-full max-w-3xl mx-auto shadow-md">
+        <Card className="w-full mx-auto shadow-md">
           <CardHeader className="border-b">
             <CardTitle className="text-xl font-semibold text-center">T-Shirt Distribution Dashboard</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
               <Input
                 type="text"
                 placeholder="Enter unique ID"
@@ -72,15 +72,15 @@ const TShirtDistributionDashboard = () => {
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 disabled={loading}
-                className="flex-1 h-10"
+                className="flex-1 h-12"
                 maxLength={10}
               />
-              <Button onClick={handleSearch} disabled={loading} className="bg-blue-600 hover:bg-blue-700">
+              <Button onClick={handleSearch} disabled={loading} className="bg-blue-600 hover:bg-blue-700 px-4 sm:px-8 h-12">
                 {loading ? (
                   "Searching..."
                 ) : (
                   <>
-                    <Search className="w-4 h-4 mr-2" />
+                    <Search className="w-5 h-5 mr-2" />
                     Search
                   </>
                 )}
@@ -88,55 +88,79 @@ const TShirtDistributionDashboard = () => {
             </div>
 
             {error && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="mx-4 sm:mx-8 md:mx-16 lg:mx-32">
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
 
             {participant && (
-              <div className="bg-white rounded-lg p-6 shadow-sm border">
-                <div className="grid grid-cols-2 gap-x-12 gap-y-6">
+              <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
                   <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-blue-500 mt-1" />
+                    <User className="w-6 h-6 text-blue-500 mt-1 shrink-0" />
                     <div>
                       <div className="text-sm text-gray-500">Name</div>
-                      <div className="font-medium mt-1">
+                      <div className="text-base sm:text-lg font-medium mt-1 break-words">
                         {participant.first_name} {participant.last_name}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Calendar className="w-5 h-5 text-purple-500 mt-1" />
-                    <div>
-                      <div className="text-sm text-gray-500">Registration Date</div>
-                      <div className="font-medium mt-1">{new Date(participant.created_at).toLocaleDateString()}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Mail className="w-5 h-5 text-green-500 mt-1" />
-                    <div>
-                      <div className="text-sm text-gray-500">Email</div>
-                      <div className="font-medium mt-1 truncate max-w-[200px]">{participant.email}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Phone className="w-5 h-5 text-yellow-500 mt-1" />
-                    <div>
-                      <div className="text-sm text-gray-500">Phone</div>
-                      <div className="font-medium mt-1">{participant.mobile}</div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3 col-span-2">
-                    <CreditCard className="w-5 h-5 text-red-500 mt-1" />
+                    <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
                     <div>
                       <div className="text-sm text-gray-500">Payment Status</div>
                       <div className="mt-1">
                         <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">{participant.payment_status}</span>
                       </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Calendar className="w-6 h-6 text-purple-500 mt-1 shrink-0" />
+                    <div>
+                      <div className="text-sm text-gray-500">Registration Date</div>
+                      <div className="text-base sm:text-lg font-medium mt-1">{new Date(participant.created_at).toLocaleDateString()}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-6 h-6 text-green-500 mt-1 shrink-0" />
+                    <div>
+                      <div className="text-sm text-gray-500">Email</div>
+                      <div className="text-base sm:text-lg font-medium mt-1 break-words">{participant.email}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-6 h-6 text-yellow-500 mt-1 shrink-0" />
+                    <div>
+                      <div className="text-sm text-gray-500">Phone</div>
+                      <div className="text-base sm:text-lg font-medium mt-1">{participant.mobile}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-6 h-6 text-orange-500 mt-1 shrink-0" />
+                    <div>
+                      <div className="text-sm text-gray-500">City</div>
+                      <div className="text-base sm:text-lg font-medium mt-1">{participant.city}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Trophy className="w-6 h-6 text-indigo-500 mt-1 shrink-0" />
+                    <div>
+                      <div className="text-sm text-gray-500">Race Categories</div>
+                      <div className="text-base sm:text-lg font-medium mt-1">{participant.race_categories || "10KM"}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
+                    <Shirt className="w-6 h-6 text-teal-500 mt-1 shrink-0" />
+                    <div>
+                      <div className="text-sm text-gray-500">T-shirt Size</div>
+                      <div className="text-base sm:text-lg font-medium mt-1">{participant.t_shirt_size}</div>
                     </div>
                   </div>
                 </div>
