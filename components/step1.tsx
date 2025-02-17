@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, Shirt, FileCheck } from "lucide-react";
+import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, Shirt, FileCheck, Shield, AlertTriangle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
@@ -15,6 +15,7 @@ const PaymentVerify = () => {
   const [error, setError] = useState("");
   const [updatingPayment, setUpdatingPayment] = useState(false);
   const [newPaymentStatus, setNewPaymentStatus] = useState("");
+  const [verifyingId, setVerifyingId] = useState(false);
 
   const fetchParticipantDetails = async (number: string) => {
     setLoading(true);
@@ -65,7 +66,7 @@ const PaymentVerify = () => {
     setUpdatingPayment(true);
     try {
       const { error } = await supabase
-        .from("dashboard")
+        .from("registrations")
         .update({ payment_status: newPaymentStatus.toUpperCase() })
         .eq("identification_number", participant.identification_number);
 
@@ -83,6 +84,33 @@ const PaymentVerify = () => {
       setError("Failed to update payment status");
     } finally {
       setUpdatingPayment(false);
+    }
+  };
+
+  const handleVerifyGovtId = async (verify: boolean) => {
+    if (!participant?.govt_id) return;
+
+    setVerifyingId(true);
+    try {
+      const { error } = await supabase
+        .from("registrations")
+        .update({ govt_id_verified: verify })
+        .eq("identification_number", participant.identification_number);
+
+      if (error) throw error;
+
+      setParticipant((prev) =>
+        prev
+          ? {
+              ...prev,
+              govt_id_verified: verify,
+            }
+          : null
+      );
+    } catch (err) {
+      setError(`Failed to ${verify ? "verify" : "unverify"} government ID`);
+    } finally {
+      setVerifyingId(false);
     }
   };
 
@@ -160,35 +188,87 @@ const PaymentVerify = () => {
 
                     <ParticipantDetailItem icon={Trophy} label="Race Categories" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
 
-                    <ParticipantDetailItem icon={FileCheck} label="Government ID" value={participant.govt_id} iconColor="text-violet-500" />
+                    <div className="flex flex-col gap-2">
+                      <ParticipantDetailItem
+                        icon={FileCheck}
+                        label="Government ID"
+                        value={participant.govt_id}
+                        iconColor="text-violet-500"
+                        emptyMessage="No ID"
+                      />
+                      {participant.govt_id && (
+                        <div className="flex items-center gap-2">
+                          {participant.govt_id_verified ? (
+                            <div className="flex items-center text-green-600 gap-2">
+                              <Shield className="w-4 h-4" />
+                              <span className="text-sm">Verified</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center text-amber-600 gap-2">
+                              <AlertTriangle className="w-4 h-4" />
+                              <span className="text-sm">Not verified</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Separate section for payment status update */}
+                {/* Section for payment status update */}
                 <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                  <h3 className="font-medium text-lg mb-4">Update Payment Status</h3>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <div className="w-full sm:w-auto flex-1">
-                      <select
-                        value={newPaymentStatus}
-                        onChange={(e) => setNewPaymentStatus(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm h-9"
-                      >
-                        <option value="">Select new status</option>
-                        <option value="DONE">DONE</option>
-                        <option value="PENDING">PENDING</option>
-                        <option value="QR">QR</option>
-                        <option value="OFFLINE">OFFLINE</option>
-                      </select>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Payment Status Update */}
+                    <div>
+                      <h3 className="font-medium text-lg mb-4">Update Payment Status</h3>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                        <div className="w-full sm:w-auto flex-1">
+                          <select
+                            value={newPaymentStatus}
+                            onChange={(e) => setNewPaymentStatus(e.target.value)}
+                            className="block w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm h-9"
+                          >
+                            <option value="">Select new status</option>
+                            <option value="DONE">DONE</option>
+                            <option value="PENDING">PENDING</option>
+                            <option value="QR">QR</option>
+                            <option value="OFFLINE">OFFLINE</option>
+                          </select>
+                        </div>
+                        <Button
+                          onClick={handleUpdatePaymentStatus}
+                          disabled={!newPaymentStatus || updatingPayment}
+                          className="whitespace-nowrap px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto h-9"
+                        >
+                          {updatingPayment ? "Updating..." : "Update Status"}
+                        </Button>
+                      </div>
                     </div>
 
-                    <Button
-                      onClick={handleUpdatePaymentStatus}
-                      disabled={!newPaymentStatus || updatingPayment}
-                      className="whitespace-nowrap px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto h-9"
-                    >
-                      {updatingPayment ? "Updating..." : "Update Status"}
-                    </Button>
+                    {/* ID Verification Controls */}
+                    {participant.govt_id && (
+                      <div>
+                        <h3 className="font-medium text-lg mb-4">Government ID Verification</h3>
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => handleVerifyGovtId(true)}
+                            disabled={verifyingId || participant.govt_id_verified}
+                            variant={participant.govt_id_verified ? "outline" : "default"}
+                            className="flex-1"
+                          >
+                            Verify ID
+                          </Button>
+                          <Button
+                            onClick={() => handleVerifyGovtId(false)}
+                            disabled={verifyingId || !participant.govt_id_verified}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            Unverify ID
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
