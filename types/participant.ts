@@ -11,4 +11,5 @@ export interface Participant {
   t_shirt_size: string;
   govt_id: string;
   govt_id_verified: boolean;
+  received_tshirt: boolean;
 }

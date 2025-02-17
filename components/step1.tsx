@@ -119,7 +119,7 @@ const PaymentVerify = () => {
       <div className="container mx-auto px-4 py-8">
         <Card className="w-full mx-auto shadow-md">
           <CardHeader className="border-b">
-            <CardTitle className="text-xl font-semibold text-center">T-Shirt Distribution Dashboard</CardTitle>
+            <CardTitle className="text-xl font-semibold text-center">Dashboard</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
