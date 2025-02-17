@@ -9,4 +9,5 @@ export interface Participant {
   city: string;
   race_categories: string;
   t_shirt_size: string;
+  govt_id: string;
 }

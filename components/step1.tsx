@@ -1,13 +1,14 @@
 import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Input } from "../components/ui/input";
-import { Button } from "../components/ui/button";
-import { Alert, AlertDescription } from "../components/ui/alert";
-import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, Shirt } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Alert, AlertDescription } from "./ui/alert";
+import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, Shirt, FileCheck } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
+import { ParticipantDetailItem } from "./participant-detail-item";
 
-const TShirtDistributionDashboard = () => {
+const PaymentVerify = () => {
   const [participantNumber, setParticipantNumber] = useState("");
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,7 +21,7 @@ const TShirtDistributionDashboard = () => {
     setError("");
 
     try {
-      const { data, error: searchError } = await supabase.from("dashboard").select("*").eq("identification_number", number.toUpperCase()).maybeSingle();
+      const { data, error: searchError } = await supabase.from("registrations").select("*").eq("identification_number", number.toUpperCase()).maybeSingle();
 
       if (searchError) {
         throw searchError;
@@ -126,15 +127,7 @@ const TShirtDistributionDashboard = () => {
               <div className="space-y-6">
                 <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
-                    <div className="flex items-start gap-3">
-                      <User className="w-6 h-6 text-blue-500 mt-1 shrink-0" />
-                      <div>
-                        <div className="text-sm text-gray-500">Name</div>
-                        <div className="text-base sm:text-lg font-medium mt-1 break-words">
-                          {participant.first_name} {participant.last_name}
-                        </div>
-                      </div>
-                    </div>
+                    <ParticipantDetailItem icon={User} label="Name" value={`${participant.first_name} ${participant.last_name}`} iconColor="text-blue-500" />
 
                     <div className="flex items-start gap-3">
                       <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
@@ -152,53 +145,22 @@ const TShirtDistributionDashboard = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-start gap-3">
-                      <Calendar className="w-6 h-6 text-purple-500 mt-1 shrink-0" />
-                      <div>
-                        <div className="text-sm text-gray-500">Registration Date</div>
-                        <div className="text-base sm:text-lg font-medium mt-1">{new Date(participant.created_at).toLocaleDateString()}</div>
-                      </div>
-                    </div>
+                    <ParticipantDetailItem
+                      icon={Calendar}
+                      label="Registration Date"
+                      value={new Date(participant.created_at).toLocaleDateString()}
+                      iconColor="text-purple-500"
+                    />
 
-                    <div className="flex items-start gap-3">
-                      <Mail className="w-6 h-6 text-green-500 mt-1 shrink-0" />
-                      <div>
-                        <div className="text-sm text-gray-500">Email</div>
-                        <div className="text-base sm:text-lg font-medium mt-1 break-words">{participant.email}</div>
-                      </div>
-                    </div>
+                    <ParticipantDetailItem icon={Mail} label="Email" value={participant.email} iconColor="text-green-500" />
 
-                    <div className="flex items-start gap-3">
-                      <Phone className="w-6 h-6 text-yellow-500 mt-1 shrink-0" />
-                      <div>
-                        <div className="text-sm text-gray-500">Phone</div>
-                        <div className="text-base sm:text-lg font-medium mt-1">{participant.mobile}</div>
-                      </div>
-                    </div>
+                    <ParticipantDetailItem icon={Phone} label="Phone" value={participant.mobile} iconColor="text-yellow-500" />
 
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-6 h-6 text-orange-500 mt-1 shrink-0" />
-                      <div>
-                        <div className="text-sm text-gray-500">City</div>
-                        <div className="text-base sm:text-lg font-medium mt-1">{participant.city}</div>
-                      </div>
-                    </div>
+                    <ParticipantDetailItem icon={MapPin} label="City" value={participant.city} iconColor="text-orange-500" />
 
-                    <div className="flex items-start gap-3">
-                      <Trophy className="w-6 h-6 text-indigo-500 mt-1 shrink-0" />
-                      <div>
-                        <div className="text-sm text-gray-500">Race Categories</div>
-                        <div className="text-base sm:text-lg font-medium mt-1">{participant.race_categories || "10KM"}</div>
-                      </div>
-                    </div>
+                    <ParticipantDetailItem icon={Trophy} label="Race Categories" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
 
-                    <div className="flex items-start gap-3">
-                      <Shirt className="w-6 h-6 text-teal-500 mt-1 shrink-0" />
-                      <div>
-                        <div className="text-sm text-gray-500">T-shirt Size</div>
-                        <div className="text-base sm:text-lg font-medium mt-1">{participant.t_shirt_size}</div>
-                      </div>
-                    </div>
+                    <ParticipantDetailItem icon={FileCheck} label="Government ID" value={participant.govt_id} iconColor="text-violet-500" />
                   </div>
                 </div>
 
@@ -238,4 +200,4 @@ const TShirtDistributionDashboard = () => {
   );
 };
 
-export default TShirtDistributionDashboard;
+export default PaymentVerify;
