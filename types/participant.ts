@@ -12,4 +12,7 @@ export interface Participant {
   govt_id: string;
   govt_id_verified: boolean;
   received_tshirt: boolean;
+  is_from_narayanpur: boolean;
+  gender: string;
+  bib_num: BigInteger;
 }

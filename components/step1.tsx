@@ -3,10 +3,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, Shirt, FileCheck, Shield, AlertTriangle } from "lucide-react";
+import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, FileCheck, Shield, AlertTriangle } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
+
+const getIdType = (id: string): string => {
+  if (!id) return "";
+  
+  // Remove any spaces from the ID
+  const cleanId = id.replace(/\s/g, '');
+  
+  if (/^\d{12}$/.test(cleanId)) {
+    return "Aadhar Card";
+  } else if (/^\d{9}[A-Z]$/.test(cleanId)) {
+    return "PAN Card";
+  } else if (/^\d{10}$/.test(cleanId)) {
+    return "Voter ID";
+  } else if (/^\d{15}$/.test(cleanId)) {
+    return "Driving License";
+  }
+  return "Unknown ID Type";
+};
 
 const PaymentVerify = () => {
   const [participantNumber, setParticipantNumber] = useState("");
@@ -14,7 +32,6 @@ const PaymentVerify = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [updatingPayment, setUpdatingPayment] = useState(false);
-  const [newPaymentStatus, setNewPaymentStatus] = useState("");
   const [verifyingId, setVerifyingId] = useState(false);
 
   const fetchParticipantDetails = async (number: string) => {
@@ -60,26 +77,22 @@ const PaymentVerify = () => {
     }
   };
 
-  const handleUpdatePaymentStatus = async () => {
-    if (!participant || !newPaymentStatus) return;
+  const handleMarkAsPaid = async () => {
+    if (!participant) return;
 
     setUpdatingPayment(true);
     try {
       const { error } = await supabase
         .from("registrations")
-        .update({ payment_status: newPaymentStatus.toUpperCase() })
+        .update({ payment_status: "DONE" })
         .eq("identification_number", participant.identification_number);
 
       if (error) throw error;
 
-      // Update local state
       setParticipant({
         ...participant,
-        payment_status: newPaymentStatus.toUpperCase(),
+        payment_status: "DONE",
       });
-
-      // Reset selection
-      setNewPaymentStatus("");
     } catch (err) {
       setError("Failed to update payment status");
     } finally {
@@ -189,15 +202,22 @@ const PaymentVerify = () => {
                     <ParticipantDetailItem icon={Trophy} label="Race Categories" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
 
                     <div className="flex flex-col gap-2">
-                      <ParticipantDetailItem
-                        icon={FileCheck}
-                        label="Government ID"
-                        value={participant.govt_id}
-                        iconColor="text-violet-500"
-                        emptyMessage="No ID"
-                      />
+                      <div className="flex items-start gap-3">
+                        <FileCheck className="w-6 h-6 text-violet-500 mt-1 shrink-0" />
+                        <div className="flex-1">
+                          <div className="text-sm text-gray-500">Government ID</div>
+                          {participant.govt_id ? (
+                            <div className="mt-1">
+                              <div className="font-medium">{participant.govt_id}</div>
+                              <div className="text-sm text-blue-600">{getIdType(participant.govt_id)}</div>
+                            </div>
+                          ) : (
+                            <div className="mt-1 text-gray-400">No ID</div>
+                          )}
+                        </div>
+                      </div>
                       {participant.govt_id && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 ml-9">
                           {participant.govt_id_verified ? (
                             <div className="flex items-center text-green-600 gap-2">
                               <Shield className="w-4 h-4" />
@@ -215,37 +235,25 @@ const PaymentVerify = () => {
                   </div>
                 </div>
 
-                {/* Section for payment status update */}
                 <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Payment Status Update */}
                     <div>
-                      <h3 className="font-medium text-lg mb-4">Update Payment Status</h3>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                        <div className="w-full sm:w-auto flex-1">
-                          <select
-                            value={newPaymentStatus}
-                            onChange={(e) => setNewPaymentStatus(e.target.value)}
-                            className="block w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm h-9"
-                          >
-                            <option value="">Select new status</option>
-                            <option value="DONE">DONE</option>
-                            <option value="PENDING">PENDING</option>
-                            <option value="QR">QR</option>
-                            <option value="OFFLINE">OFFLINE</option>
-                          </select>
+                      <h3 className="font-medium text-lg mb-4">Payment Verification</h3>
+                      <Button
+                        onClick={handleMarkAsPaid}
+                        disabled={updatingPayment || participant.payment_status === "DONE"}
+                        className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2"
+                      >
+                        {updatingPayment ? "Processing..." : "Mark as Paid"}
+                      </Button>
+                      {participant.payment_status === "DONE" && (
+                        <div className="mt-2 text-green-600 text-sm flex items-center">
+                          <Shield className="w-4 h-4 mr-1" />
+                          Payment already verified
                         </div>
-                        <Button
-                          onClick={handleUpdatePaymentStatus}
-                          disabled={!newPaymentStatus || updatingPayment}
-                          className="whitespace-nowrap px-4 py-1.5 text-sm bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto h-9"
-                        >
-                          {updatingPayment ? "Updating..." : "Update Status"}
-                        </Button>
-                      </div>
+                      )}
                     </div>
 
-                    {/* ID Verification Controls */}
                     {participant.govt_id && (
                       <div>
                         <h3 className="font-medium text-lg mb-4">Government ID Verification</h3>
