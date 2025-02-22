@@ -1,4 +1,3 @@
-import React from "react";
 import { LucideIcon, AlertCircle } from "lucide-react";
 
 interface ParticipantDetailItemProps {
