@@ -36,9 +36,9 @@ const Login = () => {
           )}
 
           <div className="grid grid-cols-3 gap-4">
-            <Button onClick={() => handleLogin("payment")}>Payment Section</Button>
-            <Button onClick={() => handleLogin("shirt")}>T-Shirt Section</Button>
-            <Button onClick={() => handleLogin("bib")}>BIB Section</Button>
+            <Button onClick={() => handleLogin("payment")}>Payment</Button>
+            <Button onClick={() => handleLogin("shirt")}>T-Shirt</Button>
+            <Button onClick={() => handleLogin("bib")}>BIB</Button>
           </div>
         </CardContent>
       </Card>
