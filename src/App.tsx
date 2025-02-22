@@ -1,17 +1,45 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import "./App.css";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "../components/protected-route";
+import Login from "../components/login";
 import PaymentVerify from "../components/step1";
 import TShirtDistribution from "../components/step2";
 import BibDistribution from "../components/step3";
+import "./App.css";
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<PaymentVerify />} />
+        <Route path="/login" element={<Login />} />
 
-        <Route path="/tshirt-distribution" element={<TShirtDistribution />} />
-        <Route path="/bib-allocation" element={<BibDistribution/>}/>
+        <Route
+          path="/"
+          element={
+            <ProtectedRoute requiredRole="payment">
+              <PaymentVerify />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/shirt"
+          element={
+            <ProtectedRoute requiredRole="shirt">
+              <TShirtDistribution />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/bib"
+          element={
+            <ProtectedRoute requiredRole="bib">
+              <BibDistribution />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );

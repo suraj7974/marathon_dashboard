@@ -1,0 +1,49 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Alert, AlertDescription } from "./ui/alert";
+import { authenticate, setStoredAuth } from "../lib/auth";
+
+const Login = () => {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  const handleLogin = (role: "payment" | "shirt" | "bib") => {
+    if (authenticate(role, password)) {
+      setStoredAuth(role);
+      navigate(role === "payment" ? "/" : `/${role}`);
+    } else {
+      setError("Invalid password");
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <Card className="max-w-md w-full space-y-8">
+        <CardHeader>
+          <CardTitle className="text-center text-2xl">Login to Dashboard</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} />
+
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <div className="grid grid-cols-3 gap-4">
+            <Button onClick={() => handleLogin("payment")}>Payment Section</Button>
+            <Button onClick={() => handleLogin("shirt")}>T-Shirt Section</Button>
+            <Button onClick={() => handleLogin("bib")}>BIB Section</Button>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default Login;
