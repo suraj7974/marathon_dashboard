@@ -20,12 +20,8 @@ const ViewDetails = () => {
 
     try {
       // First try to search by identification_number (like in BibDistribution component)
-      const { data: idData, error: idError } = await supabase
-        .from("registrations")
-        .select("*")
-        .eq("identification_number", input.toUpperCase())
-        .maybeSingle();
-      
+      const { data: idData } = await supabase.from("registrations").select("*").eq("identification_number", input.toUpperCase()).maybeSingle();
+
       if (idData) {
         setParticipant(idData);
         setLoading(false);
@@ -35,11 +31,7 @@ const ViewDetails = () => {
       // If no results by ID, try to search by bib_num if input is numeric
       if (/^\d+$/.test(input)) {
         const bibNumber = parseInt(input, 10);
-        const { data: bibData, error: bibError } = await supabase
-          .from("registrations")
-          .select("*")
-          .eq("bib_num", bibNumber)
-          .maybeSingle();
+        const { data: bibData, error: bibError } = await supabase.from("registrations").select("*").eq("bib_num", bibNumber).maybeSingle();
 
         if (bibError) throw bibError;
 
@@ -98,7 +90,13 @@ const ViewDetails = () => {
                 className="flex-1 h-12"
               />
               <Button onClick={handleSearch} disabled={loading} className="bg-blue-600 hover:bg-blue-700 px-4 sm:px-8 h-12">
-                {loading ? "Searching..." : <><Search className="w-5 h-5 mr-2" /> Search</>}
+                {loading ? (
+                  "Searching..."
+                ) : (
+                  <>
+                    <Search className="w-5 h-5 mr-2" /> Search
+                  </>
+                )}
               </Button>
             </div>
 
@@ -111,12 +109,7 @@ const ViewDetails = () => {
             {participant && (
               <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
-                  <ParticipantDetailItem 
-                    icon={User} 
-                    label="Name" 
-                    value={`${participant.first_name} ${participant.last_name}`} 
-                    iconColor="text-blue-500" 
-                  />
+                  <ParticipantDetailItem icon={User} label="Name" value={`${participant.first_name} ${participant.last_name}`} iconColor="text-blue-500" />
 
                   <div className="flex items-start gap-3">
                     <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
@@ -134,32 +127,17 @@ const ViewDetails = () => {
                     </div>
                   </div>
 
-                  <ParticipantDetailItem 
-                    icon={Trophy} 
-                    label="Race Category" 
-                    value={participant.race_categories || "10KM"} 
-                    iconColor="text-indigo-500" 
-                  />
+                  <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
 
-                  <ParticipantDetailItem 
-                    icon={Users} 
-                    label="Gender" 
-                    value={participant.gender} 
-                    iconColor="text-purple-500" 
-                  />
+                  <ParticipantDetailItem icon={Users} label="Gender" value={participant.gender} iconColor="text-purple-500" />
 
-                  <ParticipantDetailItem 
-                    icon={Building} 
-                    label="City" 
-                    value={participant.city || "Not specified"} 
-                    iconColor="text-cyan-500" 
-                  />
+                  <ParticipantDetailItem icon={Building} label="City" value={participant.city || "Not specified"} iconColor="text-cyan-500" />
 
-                  <ParticipantDetailItem 
-                    icon={MapPin} 
-                    label="From Narayanpur" 
-                    value={participant.is_from_narayanpur ? "Yes" : "No"} 
-                    iconColor="text-orange-500" 
+                  <ParticipantDetailItem
+                    icon={MapPin}
+                    label="From Narayanpur"
+                    value={participant.is_from_narayanpur ? "Yes" : "No"}
+                    iconColor="text-orange-500"
                   />
 
                   <div className="flex flex-col gap-2">
