@@ -11,7 +11,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (role: "payment" | "shirt" | "bib") => {
+  const handleLogin = (role: "payment" | "shirt" | "bib" | "govt") => {
     if (authenticate(role, password)) {
       setStoredAuth(role);
       navigate(role === "payment" ? "/" : `/${role}`);
@@ -20,11 +20,15 @@ const Login = () => {
     }
   };
 
+  const handleViewDetails = () => {
+    navigate("/view-details");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-md w-full space-y-8">
         <CardHeader>
-          <CardTitle className="text-center text-2xl">Login to Dashboard</CardTitle>
+          <CardTitle className="text-center text-2xl">Dashboard Access</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <Input type="password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} />
@@ -35,10 +39,25 @@ const Login = () => {
             </Alert>
           )}
 
-          <div className="grid grid-cols-3 gap-4">
-            <Button onClick={() => handleLogin("payment")}>Payment</Button>
-            <Button onClick={() => handleLogin("shirt")}>T-Shirt</Button>
-            <Button onClick={() => handleLogin("bib")}>BIB</Button>
+          <div className="grid grid-cols-2 gap-4">
+            <Button onClick={() => handleLogin("govt")} className="w-full">
+              Govt ID Section
+            </Button>
+            <Button onClick={() => handleLogin("payment")} className="w-full">
+              Payment Section
+            </Button>
+            <Button onClick={() => handleLogin("shirt")} className="w-full">
+              T-Shirt Section
+            </Button>
+            <Button onClick={() => handleLogin("bib")} className="w-full">
+              BIB Section
+            </Button>
+          </div>
+
+          <div className="pt-4 border-t">
+            <Button onClick={handleViewDetails} variant="outline" className="w-full">
+              View Participant Details
+            </Button>
           </div>
         </CardContent>
       </Card>

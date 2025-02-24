@@ -4,7 +4,7 @@ import { getStoredAuth } from "../lib/auth";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole: "payment" | "shirt" | "bib";
+  requiredRole: "payment" | "shirt" | "bib" | "govt";
 }
 
 export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
