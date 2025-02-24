@@ -16,4 +16,5 @@ export interface Participant {
   gender: string;
   bib_num: BigInteger;
   payment_shirt: boolean;
+  payment_offline: boolean;
 }

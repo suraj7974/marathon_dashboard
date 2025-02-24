@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, FileCheck, Shield, AlertTriangle } from "lucide-react";
+import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, FileCheck, Shield, AlertTriangle, Home, DollarSign } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
@@ -32,7 +32,6 @@ const PaymentVerify = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [updatingPayment, setUpdatingPayment] = useState(false);
-  const [verifyingId, setVerifyingId] = useState(false);
 
   const fetchParticipantDetails = async (number: string) => {
     setLoading(true);
@@ -77,22 +76,39 @@ const PaymentVerify = () => {
     }
   };
 
-  const handleMarkAsPaid = async () => {
+  const handlePaymentAction = async () => {
     if (!participant) return;
 
     setUpdatingPayment(true);
     try {
-      const { error } = await supabase
-        .from("registrations")
-        .update({ payment_status: "DONE" })
-        .eq("identification_number", participant.identification_number);
-
-      if (error) throw error;
-
-      setParticipant({
-        ...participant,
-        payment_status: "DONE",
-      });
+      // Different update logic based on conditions
+      if (participant.is_from_narayanpur && participant.govt_id_verified) {
+        // For Narayanpur residents with verified ID, update payment_shirt
+        const { error } = await supabase
+          .from("registrations")
+          .update({ payment_shirt: true })
+          .eq("identification_number", participant.identification_number);
+          
+        if (error) throw error;
+        
+        setParticipant({
+          ...participant,
+          payment_shirt: true,
+        });
+      } else if (!participant.is_from_narayanpur) {
+        // For non-Narayanpur residents, update payment_offline
+        const { error } = await supabase
+          .from("registrations")
+          .update({ payment_offline: true })
+          .eq("identification_number", participant.identification_number);
+          
+        if (error) throw error;
+        
+        setParticipant({
+          ...participant,
+          payment_offline: true,
+        });
+      }
     } catch (err) {
       setError("Failed to update payment status");
     } finally {
@@ -100,31 +116,87 @@ const PaymentVerify = () => {
     }
   };
 
-  const handleVerifyGovtId = async (verify: boolean) => {
-    if (!participant?.govt_id) return;
+  // Helper function to determine payment verification button state
+  const getPaymentVerificationSection = () => {
+    if (!participant) return null;
 
-    setVerifyingId(true);
-    try {
-      const { error } = await supabase
-        .from("registrations")
-        .update({ govt_id_verified: verify })
-        .eq("identification_number", participant.identification_number);
-
-      if (error) throw error;
-
-      setParticipant((prev) =>
-        prev
-          ? {
-              ...prev,
-              govt_id_verified: verify,
-            }
-          : null
+    // Case 1: For Narayanpur residents
+    if (participant.is_from_narayanpur) {
+      // Need to verify government ID first
+      if (!participant.govt_id_verified) {
+        return (
+          <div>
+            <h3 className="font-medium text-lg mb-4">Payment Verification for T-shirt</h3>
+            <div className="text-amber-600 text-sm flex items-center">
+              <AlertTriangle className="w-4 h-4 mr-1" />
+              You need to verify your government ID in order to continue
+            </div>
+          </div>
+        );
+      }
+      
+      // ID verified, check if t-shirt payment is done
+      return (
+        <div>
+          <h3 className="font-medium text-lg mb-4">Payment Verification for T-shirt</h3>
+          {participant.payment_shirt ? (
+            <div className="text-green-600 text-sm flex items-center">
+              <Shield className="w-4 h-4 mr-1" />
+              T-shirt payment verified
+            </div>
+          ) : (
+            <Button
+              onClick={handlePaymentAction}
+              disabled={updatingPayment}
+              className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2"
+            >
+              {updatingPayment ? "Processing..." : "Mark T-shirt as Paid"}
+            </Button>
+          )}
+        </div>
       );
-    } catch (err) {
-      setError(`Failed to ${verify ? "verify" : "unverify"} government ID`);
-    } finally {
-      setVerifyingId(false);
     }
+    
+    // Case 2: For non-Narayanpur residents
+    // If payment is already marked as DONE
+    if (participant.payment_status === "DONE") {
+      return (
+        <div>
+          <h3 className="font-medium text-lg mb-4">Payment Verification</h3>
+          <div className="text-green-600 text-sm flex items-center">
+            <Shield className="w-4 h-4 mr-1" />
+            Payment already verified
+          </div>
+        </div>
+      );
+    }
+    
+    // If offline payment is already verified
+    if (participant.payment_offline) {
+      return (
+        <div>
+          <h3 className="font-medium text-lg mb-4">Payment Verification</h3>
+          <div className="text-green-600 text-sm flex items-center">
+            <Shield className="w-4 h-4 mr-1" />
+            Payment already verified
+          </div>
+        </div>
+      );
+    }
+    
+    // Payment pending, show mark as paid button
+    return (
+      <div>
+        <h3 className="font-medium text-lg mb-4">Payment Verification</h3>
+        <Button
+          onClick={handlePaymentAction}
+          disabled={updatingPayment}
+          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2"
+        >
+          {updatingPayment ? "Processing..." : "Mark as Paid"}
+        </Button>
+      </div>
+    );
   };
 
   return (
@@ -166,7 +238,7 @@ const PaymentVerify = () => {
 
             {participant && (
               <div className="space-y-6">
-                <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
                     <ParticipantDetailItem icon={User} label="Name" value={`${participant.first_name} ${participant.last_name}`} iconColor="text-blue-500" />
 
@@ -177,10 +249,27 @@ const PaymentVerify = () => {
                         <div className="mt-1">
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                              participant.payment_status === "DONE" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              participant.payment_status === "DONE" || participant.payment_offline ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {participant.payment_status}
+                            {participant.payment_status === "DONE" || participant.payment_offline ? "DONE" : participant.payment_status}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* New Offline Payment Status Section */}
+                    <div className="flex items-start gap-3">
+                      <DollarSign className="w-6 h-6 text-emerald-500 mt-1 shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-sm text-gray-500"> Payment Mode</div>
+                        <div className="mt-1">
+                          <span
+                            className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                              participant.payment_offline ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {participant.payment_offline ? "Offline" : "Other"}
                           </span>
                         </div>
                       </div>
@@ -198,6 +287,32 @@ const PaymentVerify = () => {
                     <ParticipantDetailItem icon={Phone} label="Phone" value={participant.mobile} iconColor="text-yellow-500" />
 
                     <ParticipantDetailItem icon={MapPin} label="City" value={participant.city} iconColor="text-orange-500" />
+
+                    {/* Narayanpur status section with T-shirt payment info */}
+                    <div className="flex items-start gap-3">
+                      <Home className="w-6 h-6 text-teal-500 mt-1 shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-sm text-gray-500">From Narayanpur</div>
+                        <div className="mt-1">
+                          <span
+                            className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                              participant.is_from_narayanpur ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                            }`}
+                          >
+                            {participant.is_from_narayanpur ? "Yes" : "No"}
+                          </span>
+                          
+                          {participant.is_from_narayanpur && (
+                            <div className="mt-1 text-sm">
+                              <span className="font-medium">T-shirt Payment:</span>{" "}
+                              <span className={participant.payment_shirt ? "text-green-600" : "text-amber-600"}>
+                                {participant.payment_shirt ? "Verified" : "Not Verified"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
                     <ParticipantDetailItem icon={Trophy} label="Race Categories" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
 
@@ -235,49 +350,8 @@ const PaymentVerify = () => {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                      <h3 className="font-medium text-lg mb-4">Payment Verification</h3>
-                      <Button
-                        onClick={handleMarkAsPaid}
-                        disabled={updatingPayment || participant.payment_status === "DONE"}
-                        className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2"
-                      >
-                        {updatingPayment ? "Processing..." : "Mark as Paid"}
-                      </Button>
-                      {participant.payment_status === "DONE" && (
-                        <div className="mt-2 text-green-600 text-sm flex items-center">
-                          <Shield className="w-4 h-4 mr-1" />
-                          Payment already verified
-                        </div>
-                      )}
-                    </div>
-
-                    {participant.govt_id && (
-                      <div>
-                        <h3 className="font-medium text-lg mb-4">Government ID Verification</h3>
-                        <div className="flex gap-3">
-                          <Button
-                            onClick={() => handleVerifyGovtId(true)}
-                            disabled={verifyingId || participant.govt_id_verified}
-                            variant={participant.govt_id_verified ? "outline" : "default"}
-                            className="flex-1"
-                          >
-                            Verify ID
-                          </Button>
-                          <Button
-                            onClick={() => handleVerifyGovtId(false)}
-                            disabled={verifyingId || !participant.govt_id_verified}
-                            variant="outline"
-                            className="flex-1"
-                          >
-                            Unverify ID
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:px-16 lg:px-32">
+                  {getPaymentVerificationSection()}
                 </div>
               </div>
             )}
