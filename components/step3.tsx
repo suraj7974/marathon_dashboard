@@ -23,11 +23,7 @@ const BibDistribution = () => {
     setBibError("");
 
     try {
-      const { data, error: searchError } = await supabase
-        .from("registrations")
-        .select("*")
-        .eq("identification_number", number.toUpperCase())
-        .maybeSingle();
+      const { data, error: searchError } = await supabase.from("registrations").select("*").eq("identification_number", number.toUpperCase()).maybeSingle();
 
       if (searchError) throw searchError;
 
@@ -68,42 +64,40 @@ const BibDistribution = () => {
   // Function to get valid BIB range for current participant
   const getValidBibRange = (): { min: number; max: number } | null => {
     if (!participant) return null;
-    
+
     const raceCategory = participant.race_categories || "10KM";
     const isFromNarayanpur = participant.is_from_narayanpur;
-    
+
     if (raceCategory === "5KM") {
       return { min: 5001, max: 5700 };
     } else if (raceCategory === "10KM") {
       return { min: 10000, max: 12499 };
     } else if (raceCategory === "21KM") {
-      return isFromNarayanpur 
-        ? { min: 23000, max: 25999 } 
-        : { min: 21000, max: 22999 };
+      return isFromNarayanpur ? { min: 23000, max: 25999 } : { min: 21000, max: 22999 };
     }
-    
+
     return null;
   };
 
   // Validate BIB number based on race category and location
   const validateBibNumber = (number: number): string => {
     if (!participant) return "No participant selected";
-    
+
     const range = getValidBibRange();
     if (!range) return "Unable to determine valid BIB range";
-    
+
     if (number < range.min || number > range.max) {
       return `BIB number must be between ${range.min}-${range.max}`;
     }
-    
+
     return ""; // No error
   };
 
   const handleBibInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numbers
-    const value = e.target.value.replace(/[^0-9]/g, '');
+    const value = e.target.value.replace(/[^0-9]/g, "");
     setNewBibNumber(value);
-    
+
     // Validate immediately if there's a value
     if (value) {
       const bibNumber = parseInt(value, 10);
@@ -163,15 +157,34 @@ const BibDistribution = () => {
   const getBibRangeText = () => {
     const range = getValidBibRange();
     if (!range) return "";
-    
+
     const raceCategory = participant?.race_categories || "10KM";
     let categoryText = raceCategory;
-    
+
     if (raceCategory === "21KM" && participant) {
       categoryText = participant.is_from_narayanpur ? "21KM Narayanpur" : "21KM Open";
     }
-    
+
     return `Valid range for ${categoryText}: ${range.min}-${range.max}`;
+  };
+
+  const canAssignBib = (participant: Participant): { allowed: boolean; message: string } => {
+    if (participant.is_from_narayanpur) {
+      if (!participant.govt_id_verified) {
+        return {
+          allowed: false,
+          message: "Government ID needs to be verified before BIB assignment",
+        };
+      }
+    } else {
+      if (!participant.received_tshirt) {
+        return {
+          allowed: false,
+          message: "T-shirt must be collected before BIB assignment",
+        };
+      }
+    }
+    return { allowed: true, message: "" };
   };
 
   return (
@@ -215,12 +228,7 @@ const BibDistribution = () => {
               <>
                 <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
-                    <ParticipantDetailItem 
-                      icon={User} 
-                      label="Name" 
-                      value={`${participant.first_name} ${participant.last_name}`} 
-                      iconColor="text-blue-500" 
-                    />
+                    <ParticipantDetailItem icon={User} label="Name" value={`${participant.first_name} ${participant.last_name}`} iconColor="text-blue-500" />
 
                     <div className="flex items-start gap-3">
                       <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
@@ -238,32 +246,17 @@ const BibDistribution = () => {
                       </div>
                     </div>
 
-                    <ParticipantDetailItem 
-                      icon={Trophy} 
-                      label="Race Category" 
-                      value={participant.race_categories || "10KM"} 
-                      iconColor="text-indigo-500" 
-                    />
+                    <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
 
-                    <ParticipantDetailItem 
-                      icon={Users} 
-                      label="Gender" 
-                      value={participant.gender} 
-                      iconColor="text-purple-500" 
-                    />
+                    <ParticipantDetailItem icon={Users} label="Gender" value={participant.gender} iconColor="text-purple-500" />
 
-                    <ParticipantDetailItem 
-                      icon={Building} 
-                      label="City" 
-                      value={participant.city || "Not specified"} 
-                      iconColor="text-cyan-500" 
-                    />
+                    <ParticipantDetailItem icon={Building} label="City" value={participant.city || "Not specified"} iconColor="text-cyan-500" />
 
-                    <ParticipantDetailItem 
-                      icon={MapPin} 
-                      label="From Narayanpur" 
-                      value={participant.is_from_narayanpur ? "Yes" : "No"} 
-                      iconColor="text-orange-500" 
+                    <ParticipantDetailItem
+                      icon={MapPin}
+                      label="From Narayanpur"
+                      value={participant.is_from_narayanpur ? "Yes" : "No"}
+                      iconColor="text-orange-500"
                     />
 
                     <div className="flex flex-col gap-2">
@@ -307,37 +300,48 @@ const BibDistribution = () => {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-3">
-                        <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
-                          <p className="text-blue-800 font-medium">{getBibRangeText()}</p>
-                        </div>
-                        
-                        <div className="flex flex-col sm:flex-row gap-3">
-                          <div className="relative flex-1">
-                            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                            <Input
-                              type="text"
-                              placeholder="Enter BIB number"
-                              value={newBibNumber}
-                              onChange={handleBibInputChange}
-                              onKeyPress={handleBibKeyPress}
-                              className={`pl-10 h-12 ${bibError ? 'border-red-500 focus:ring-red-500' : ''}`}
-                              disabled={updatingBib}
-                            />
-                          </div>
-                          <Button 
-                            onClick={handleUpdateBib} 
-                            disabled={!newBibNumber || updatingBib || !!bibError} 
-                            className="bg-green-600 hover:bg-green-700 h-12"
-                          >
-                            {updatingBib ? "Updating..." : "Assign BIB Number"}
-                          </Button>
-                        </div>
-                        
-                        {bibError && (
+                        {canAssignBib(participant).allowed ? (
+                          <>
+                            <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                              <p className="text-blue-800 font-medium">{getBibRangeText()}</p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                              <div className="relative flex-1">
+                                <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                                <Input
+                                  type="text"
+                                  placeholder="Enter BIB number"
+                                  value={newBibNumber}
+                                  onChange={handleBibInputChange}
+                                  onKeyPress={handleBibKeyPress}
+                                  className={`pl-10 h-12 ${bibError ? "border-red-500 focus:ring-red-500" : ""}`}
+                                  disabled={updatingBib}
+                                />
+                              </div>
+                              <Button
+                                onClick={handleUpdateBib}
+                                disabled={!newBibNumber || updatingBib || !!bibError}
+                                className="bg-green-600 hover:bg-green-700 h-12"
+                              >
+                                {updatingBib ? "Updating..." : "Assign BIB Number"}
+                              </Button>
+                            </div>
+
+                            {bibError && (
+                              <Alert variant="destructive">
+                                <AlertDescription className="flex items-center gap-2">
+                                  <AlertTriangle className="w-4 h-4" />
+                                  {bibError}
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                          </>
+                        ) : (
                           <Alert variant="destructive">
                             <AlertDescription className="flex items-center gap-2">
                               <AlertTriangle className="w-4 h-4" />
-                              {bibError}
+                              {canAssignBib(participant).message}
                             </AlertDescription>
                           </Alert>
                         )}
