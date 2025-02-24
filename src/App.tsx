@@ -40,12 +40,7 @@ function App() {
           }
         />
 
-        <Route
-          path="/view-details"
-          element={
-              <ViewDetails />
-          }
-        />
+        <Route path="/view-details" element={<ViewDetails />} />
 
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>

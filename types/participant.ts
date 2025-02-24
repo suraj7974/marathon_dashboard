@@ -15,4 +15,5 @@ export interface Participant {
   is_from_narayanpur: boolean;
   gender: string;
   bib_num: BigInteger;
+  payment_shirt: boolean;
 }

@@ -22,14 +22,13 @@ const TShirtDistribution = () => {
     try {
       const { data, error: searchError } = await supabase
         .from("registrations")
-        .select("*, received_tshirt:received_tshirt::boolean") // Explicitly cast to boolean
+        .select("*, received_tshirt:received_tshirt::boolean")
         .eq("identification_number", number.toUpperCase())
         .maybeSingle();
 
       if (searchError) throw searchError;
 
       if (data) {
-        // Ensure received_tshirt is boolean
         setParticipant({
           ...data,
           received_tshirt: Boolean(data.received_tshirt),
@@ -94,6 +93,28 @@ const TShirtDistribution = () => {
     }
   };
 
+  const canDistributeTshirt = () => {
+    if (!participant) return false;
+    if (participant.is_from_narayanpur) {
+      return participant.payment_shirt;
+    } else {
+      return participant.payment_status === "DONE";
+    }
+  };
+
+  const getPaymentStatusDisplay = (participant: Participant) => {
+    if (participant.is_from_narayanpur) {
+      return {
+        status: participant.payment_shirt ? "PAID" : "PENDING",
+        label: "T-shirt Payment",
+      };
+    }
+    return {
+      status: participant.payment_status,
+      label: "Payment Status",
+    };
+  };
+
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
@@ -140,14 +161,16 @@ const TShirtDistribution = () => {
                     <div className="flex items-start gap-3">
                       <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
                       <div className="flex-1">
-                        <div className="text-sm text-gray-500">Payment Status</div>
+                        <div className="text-sm text-gray-500">{getPaymentStatusDisplay(participant).label}</div>
                         <div className="mt-1">
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                              participant.payment_status === "DONE" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              getPaymentStatusDisplay(participant).status === "DONE" || getPaymentStatusDisplay(participant).status === "PAID"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {participant.payment_status}
+                            {getPaymentStatusDisplay(participant).status}
                           </span>
                         </div>
                       </div>
@@ -197,25 +220,33 @@ const TShirtDistribution = () => {
                         {participant.received_tshirt ? "T-shirt Distributed" : "Not Distributed"}
                       </div>
 
-                      <div className="flex gap-3">
-                        <Button
-                          onClick={() => handleUpdateTshirtStatus(true)}
-                          disabled={updatingTshirt || participant.received_tshirt}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Check className="w-4 h-4 mr-2" />
-                          Mark as Distributed
-                        </Button>
-                        <Button
-                          onClick={() => handleUpdateTshirtStatus(false)}
-                          disabled={updatingTshirt || !participant.received_tshirt}
-                          variant="outline"
-                          className="border-red-200 text-red-600 hover:bg-red-50"
-                        >
-                          <X className="w-4 h-4 mr-2" />
-                          Mark as Not Distributed
-                        </Button>
-                      </div>
+                      {canDistributeTshirt() ? (
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => handleUpdateTshirtStatus(true)}
+                            disabled={updatingTshirt || participant.received_tshirt}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Check className="w-4 h-4 mr-2" />
+                            Mark as Distributed
+                          </Button>
+                          <Button
+                            onClick={() => handleUpdateTshirtStatus(false)}
+                            disabled={updatingTshirt || !participant.received_tshirt}
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50"
+                          >
+                            <X className="w-4 h-4 mr-2" />
+                            Mark as Not Distributed
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="text-red-600 text-sm">
+                          {participant.is_from_narayanpur
+                            ? "Payment for T-shirt is pending. Please complete the payment."
+                            : "Payment is pending. Please complete the payment."}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
