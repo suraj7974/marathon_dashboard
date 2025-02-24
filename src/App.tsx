@@ -5,6 +5,7 @@ import PaymentVerify from "../components/step1";
 import TShirtDistribution from "../components/step2";
 import BibDistribution from "../components/step3";
 import ViewDetails from "../components/viewdetails";
+import GovernmentIdVerification from "../components/step0"
 import "./App.css";
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/govt" element={<GovernmentIdVerification />} />
 
         <Route
           path="/"
