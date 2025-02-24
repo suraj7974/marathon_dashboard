@@ -131,7 +131,8 @@ const GovernmentIdVerification = () => {
         .from("registrations")
         .update({ 
           is_from_narayanpur: false,
-          govt_id_verified: false 
+          govt_id_verified: false,
+          payment_status: "PENDING" // Added this line to update payment_status to PENDING
         })
         .eq("identification_number", participant.identification_number);
 
@@ -143,11 +144,12 @@ const GovernmentIdVerification = () => {
               ...prev,
               is_from_narayanpur: false,
               govt_id_verified: false,
+              payment_status: "PENDING" // Update local state as well
             }
           : null
       );
       
-      setSuccessMessage("Narayanpur status removed and ID verification cleared");
+      setSuccessMessage("Narayanpur status removed, ID verification cleared, and payment status set to PENDING");
         
     } catch (err) {
       setError("Failed to remove Narayanpur status");
@@ -240,6 +242,15 @@ const GovernmentIdVerification = () => {
                       <div className={`flex items-center gap-2 ${participant.is_from_narayanpur ? "text-blue-600" : "text-gray-600"}`}>
                         <MapPin className="w-5 h-5" />
                         <span>{participant.is_from_narayanpur ? "Participant from Narayanpur" : "Not from Narayanpur"}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="sm:col-span-2 mt-2">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <div className="text-sm text-gray-500">Payment Status:</div>
+                        <span className={`font-medium ${participant.payment_status === "PENDING" ? "text-amber-600" : participant.payment_status === "COMPLETED" ? "text-green-600" : "text-gray-700"}`}>
+                          {participant.payment_status || "Not Set"}
+                        </span>
                       </div>
                     </div>
                   </div>
