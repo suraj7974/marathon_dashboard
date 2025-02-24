@@ -4,6 +4,7 @@ import Login from "../components/login";
 import PaymentVerify from "../components/step1";
 import TShirtDistribution from "../components/step2";
 import BibDistribution from "../components/step3";
+import ViewDetails from "../components/viewdetails";
 import "./App.css";
 
 function App() {
@@ -36,6 +37,13 @@ function App() {
             <ProtectedRoute requiredRole="bib">
               <BibDistribution />
             </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/view-details"
+          element={
+              <ViewDetails />
           }
         />
 

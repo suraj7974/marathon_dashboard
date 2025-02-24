@@ -14,11 +14,13 @@ const BibDistribution = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [newBibNumber, setNewBibNumber] = useState("");
+  const [bibError, setBibError] = useState("");
   const [updatingBib, setUpdatingBib] = useState(false);
 
   const fetchParticipantDetails = async (number: string) => {
     setLoading(true);
     setError("");
+    setBibError("");
 
     try {
       const { data, error: searchError } = await supabase
@@ -63,10 +65,55 @@ const BibDistribution = () => {
     }
   };
 
+  // Function to get valid BIB range for current participant
+  const getValidBibRange = (): { min: number; max: number } | null => {
+    if (!participant) return null;
+    
+    const raceCategory = participant.race_categories || "10KM";
+    const isFromNarayanpur = participant.is_from_narayanpur;
+    
+    if (raceCategory === "5KM") {
+      return { min: 5001, max: 5700 };
+    } else if (raceCategory === "10KM") {
+      return { min: 10000, max: 12499 };
+    } else if (raceCategory === "21KM") {
+      return isFromNarayanpur 
+        ? { min: 23000, max: 25999 } 
+        : { min: 21000, max: 22999 };
+    }
+    
+    return null;
+  };
+
+  // Validate BIB number based on race category and location
+  const validateBibNumber = (number: number): string => {
+    if (!participant) return "No participant selected";
+    
+    const range = getValidBibRange();
+    if (!range) return "Unable to determine valid BIB range";
+    
+    if (number < range.min || number > range.max) {
+      return `BIB number must be between ${range.min}-${range.max}`;
+    }
+    
+    return ""; // No error
+  };
+
   const handleBibInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // Only allow numbers
     const value = e.target.value.replace(/[^0-9]/g, '');
     setNewBibNumber(value);
+    
+    // Validate immediately if there's a value
+    if (value) {
+      const bibNumber = parseInt(value, 10);
+      if (!isNaN(bibNumber)) {
+        const error = validateBibNumber(bibNumber);
+        setBibError(error);
+      }
+    } else {
+      setBibError("");
+    }
   };
 
   const handleBibKeyPress = (e: React.KeyboardEvent) => {
@@ -78,13 +125,21 @@ const BibDistribution = () => {
   const handleUpdateBib = async () => {
     if (!participant || !newBibNumber) return;
 
-    setUpdatingBib(true);
     try {
       const bibNumber = parseInt(newBibNumber, 10);
       if (isNaN(bibNumber)) {
-        throw new Error("Invalid bib number");
+        setBibError("Invalid bib number");
+        return;
       }
 
+      // Validate BIB number range
+      const validationError = validateBibNumber(bibNumber);
+      if (validationError) {
+        setBibError(validationError);
+        return;
+      }
+
+      setUpdatingBib(true);
       const { data, error } = await supabase
         .from("registrations")
         .update({ bib_num: bibNumber })
@@ -96,11 +151,27 @@ const BibDistribution = () => {
 
       setParticipant(data);
       setNewBibNumber("");
+      setBibError("");
     } catch (err) {
       setError("Failed to update bib number");
     } finally {
       setUpdatingBib(false);
     }
+  };
+
+  // Helper function to get the valid BIB range text
+  const getBibRangeText = () => {
+    const range = getValidBibRange();
+    if (!range) return "";
+    
+    const raceCategory = participant?.race_categories || "10KM";
+    let categoryText = raceCategory;
+    
+    if (raceCategory === "21KM" && participant) {
+      categoryText = participant.is_from_narayanpur ? "21KM Narayanpur" : "21KM Open";
+    }
+    
+    return `Valid range for ${categoryText}: ${range.min}-${range.max}`;
   };
 
   return (
@@ -235,26 +306,41 @@ const BibDistribution = () => {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <div className="relative flex-1">
-                          <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                          <Input
-                            type="text"
-                            placeholder="Enter BIB number"
-                            value={newBibNumber}
-                            onChange={handleBibInputChange}
-                            onKeyPress={handleBibKeyPress}
-                            className="pl-10 h-12"
-                            disabled={updatingBib}
-                          />
+                      <div className="flex flex-col gap-3">
+                        <div className="bg-blue-50 p-3 rounded-md border border-blue-200">
+                          <p className="text-blue-800 font-medium">{getBibRangeText()}</p>
                         </div>
-                        <Button 
-                          onClick={handleUpdateBib} 
-                          disabled={!newBibNumber || updatingBib} 
-                          className="bg-green-600 hover:bg-green-700 h-12"
-                        >
-                          {updatingBib ? "Updating..." : "Assign BIB Number"}
-                        </Button>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <div className="relative flex-1">
+                            <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                            <Input
+                              type="text"
+                              placeholder="Enter BIB number"
+                              value={newBibNumber}
+                              onChange={handleBibInputChange}
+                              onKeyPress={handleBibKeyPress}
+                              className={`pl-10 h-12 ${bibError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                              disabled={updatingBib}
+                            />
+                          </div>
+                          <Button 
+                            onClick={handleUpdateBib} 
+                            disabled={!newBibNumber || updatingBib || !!bibError} 
+                            className="bg-green-600 hover:bg-green-700 h-12"
+                          >
+                            {updatingBib ? "Updating..." : "Assign BIB Number"}
+                          </Button>
+                        </div>
+                        
+                        {bibError && (
+                          <Alert variant="destructive">
+                            <AlertDescription className="flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4" />
+                              {bibError}
+                            </AlertDescription>
+                          </Alert>
+                        )}
                       </div>
                     )}
                   </div>
