@@ -17,4 +17,5 @@ export interface Participant {
   bib_num: BigInteger;
   payment_shirt: boolean;
   payment_offline: boolean;
+  payment_offline_method: string;
 }

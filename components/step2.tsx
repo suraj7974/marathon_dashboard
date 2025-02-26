@@ -68,7 +68,10 @@ const TShirtDistribution = () => {
     if (!participant) return;
 
     setUpdatingTshirt(true);
+    setError("");
+
     try {
+      // 1. First update registration status
       const { data, error } = await supabase
         .from("registrations")
         .update({ received_tshirt: received })
@@ -77,7 +80,40 @@ const TShirtDistribution = () => {
         .single();
 
       if (error) throw error;
+      
+      if (received) {
+        // 2. Get the current quantity left in inventory
+        const { data: inventoryData, error: inventoryError } = await supabase
+          .from("tshirt_inventory")
+          .select("quantity_left")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
 
+        if (inventoryError) throw inventoryError;
+
+        // Calculate new quantity
+        const newQuantity = inventoryData.quantity_left - 1;
+        
+        if (newQuantity < 0) {
+          throw new Error("Not enough inventory available");
+        }
+
+        // 3. Insert a new row in tshirt_inventory table with the updated information
+        const { error: insertError } = await supabase
+          .from("tshirt_inventory")
+          .insert({
+            registration: true,
+            payment_method: participant.payment_offline_method || "N/A",
+            quantity_left: newQuantity,
+            mobile: participant.mobile,
+            identification_number: participant.identification_number
+          });
+
+        if (insertError) throw insertError;
+      }
+
+      // Update the local participant state
       setParticipant((prev) =>
         prev
           ? {
@@ -87,7 +123,8 @@ const TShirtDistribution = () => {
           : null
       );
     } catch (err) {
-      setError("Failed to update t-shirt status");
+      console.error("Update error:", err);
+      setError("Failed to update t-shirt status: " + (err instanceof Error ? err.message : "Unknown error"));
     } finally {
       setUpdatingTshirt(false);
     }
@@ -232,8 +269,12 @@ const TShirtDistribution = () => {
                             disabled={updatingTshirt || participant.received_tshirt}
                             className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                           >
-                            <Check className="w-4 h-4 mr-2" />
-                            Mark as Distributed
+                            {updatingTshirt ? "Processing..." : (
+                              <>
+                                <Check className="w-4 h-4 mr-2" />
+                                Mark as Distributed
+                              </>
+                            )}
                           </Button>
                           <Button
                             onClick={() => handleUpdateTshirtStatus(false)}
@@ -241,8 +282,12 @@ const TShirtDistribution = () => {
                             variant="outline"
                             className="border-red-200 text-red-600 hover:bg-red-50 w-full sm:w-auto"
                           >
-                            <X className="w-4 h-4 mr-2" />
-                            Mark as Not Distributed
+                            {updatingTshirt ? "Processing..." : (
+                              <>
+                                <X className="w-4 h-4 mr-2" />
+                                Mark as Not Distributed
+                              </>
+                            )}
                           </Button>
                         </div>
                       ) : (
