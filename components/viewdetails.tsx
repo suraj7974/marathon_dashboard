@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, CreditCard, Trophy, MapPin, FileCheck, Shield, AlertTriangle, Users, Building } from "lucide-react";
+import { Search, User, CreditCard, Trophy, MapPin, FileCheck, Shield, AlertTriangle, Users, Building, Phone, ShirtIcon, Tag, Check, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
@@ -111,6 +111,8 @@ const ViewDetails = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
                   <ParticipantDetailItem icon={User} label="Name" value={`${participant.first_name} ${participant.last_name}`} iconColor="text-blue-500" />
 
+                  <ParticipantDetailItem icon={Phone} label="Mobile" value={participant.mobile} iconColor="text-green-500" />
+
                   <div className="flex items-start gap-3">
                     <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
                     <div className="flex-1">
@@ -132,6 +134,61 @@ const ViewDetails = () => {
                   <ParticipantDetailItem icon={Users} label="Gender" value={participant.gender} iconColor="text-purple-500" />
 
                   <ParticipantDetailItem icon={Building} label="City" value={participant.city || "Not specified"} iconColor="text-cyan-500" />
+
+                  {/* Bib Number Status */}
+                  <div className="flex items-start gap-3">
+                    <Tag className="w-6 h-6 text-amber-500 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-500">Bib Number</div>
+                      <div className="mt-1">
+                        {participant.bib_num ? (
+                          <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                            #{participant.bib_num.toString()}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-gray-600">
+                            <X className="w-4 h-4 mr-1 text-red-500" /> Not allocated
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* T-shirt Size */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 text-teal-500 mt-1 shrink-0 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-500">T-shirt Size</div>
+                      <div className="mt-1 font-medium">{participant.t_shirt_size || "Not specified"}</div>
+                    </div>
+                  </div>
+
+                  {/* T-shirt Distribution Status */}
+                  <div className="flex items-start gap-3">
+                    <div className="w-6 h-6 text-pink-500 mt-1 shrink-0 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-500">T-shirt Distribution</div>
+                      <div className="mt-1">
+                        {participant.received_tshirt ? (
+                          <span className="inline-flex items-center text-green-600">
+                            <Check className="w-4 h-4 mr-1" /> Distributed
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center text-red-600">
+                            <X className="w-4 h-4 mr-1" /> Not distributed
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
 
                   <ParticipantDetailItem
                     icon={MapPin}
