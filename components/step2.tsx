@@ -178,7 +178,13 @@ const TShirtDistribution = () => {
 
                     <ParticipantDetailItem icon={Trophy} label="Race Categories" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
 
-                    <ParticipantDetailItem icon={Shirt} label="T-shirt Size" value={participant.t_shirt_size} iconColor="text-teal-500" />
+                    <div className="flex items-start gap-3">
+                      <Shirt className="w-6 h-6 text-teal-500 mt-1 shrink-0" />
+                      <div className="flex-1">
+                        <div className="text-sm text-gray-500">T-shirt Size</div>
+                        <div className="mt-1 text-2xl font-bold text-teal-700">{participant.t_shirt_size}</div>
+                      </div>
+                    </div>
 
                     <div className="flex flex-col gap-2">
                       <ParticipantDetailItem
