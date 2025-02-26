@@ -127,7 +127,7 @@ const ViewDetails = () => {
                     </div>
                   </div>
 
-                  <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
+                  <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_category || "10KM"} iconColor="text-indigo-500" />
 
                   <ParticipantDetailItem icon={Users} label="Gender" value={participant.gender} iconColor="text-purple-500" />
 
