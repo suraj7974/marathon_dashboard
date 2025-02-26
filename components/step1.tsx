@@ -314,7 +314,7 @@ const PaymentVerify = () => {
                       </div>
                     </div>
 
-                    <ParticipantDetailItem icon={Trophy} label="Race Categories" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
+                    <ParticipantDetailItem icon={Trophy} label="Race Categories" value={participant.race_category || "10KM"} iconColor="text-indigo-500" />
 
                     <div className="flex flex-col gap-2">
                       <div className="flex items-start gap-3">

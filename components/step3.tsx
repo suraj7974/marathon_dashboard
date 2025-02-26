@@ -65,7 +65,7 @@ const BibDistribution = () => {
   const getValidBibRange = (): { min: number; max: number } | null => {
     if (!participant) return null;
 
-    const raceCategory = participant.race_categories || "10KM";
+    const raceCategory = participant.race_category || "10KM";
     const isFromNarayanpur = participant.is_from_narayanpur;
 
     if (raceCategory === "5KM") {
@@ -158,7 +158,7 @@ const BibDistribution = () => {
     const range = getValidBibRange();
     if (!range) return "";
 
-    const raceCategory = participant?.race_categories || "10KM";
+    const raceCategory = participant?.race_category || "10KM";
     let categoryText = raceCategory;
 
     if (raceCategory === "21KM" && participant) {
@@ -246,7 +246,7 @@ const BibDistribution = () => {
                       </div>
                     </div>
 
-                    <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_categories || "10KM"} iconColor="text-indigo-500" />
+                    <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_category || "10KM"} iconColor="text-indigo-500" />
 
                     <ParticipantDetailItem icon={Users} label="Gender" value={participant.gender} iconColor="text-purple-500" />
 

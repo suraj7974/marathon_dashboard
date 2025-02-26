@@ -7,7 +7,7 @@ export interface Participant {
   payment_status: string;
   identification_number: string;
   city: string;
-  race_categories: string;
+  race_category: string;
   t_shirt_size: string;
   govt_id: string;
   govt_id_verified: boolean;
