@@ -104,7 +104,7 @@ const TShirtDistribution = () => {
           .from("tshirt_inventory")
           .insert({
             registration: true,
-            payment_method: participant.payment_offline_method || "CASH",
+            payment_method: participant.payment_offline_method || "NULL",
             quantity_left: newQuantity,
             mobile: participant.mobile,
             identification_number: participant.identification_number
