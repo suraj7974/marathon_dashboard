@@ -26,6 +26,10 @@ const Login = () => {
     navigate("/view-details");
   };
 
+  const handleidsearch = () => {
+    navigate("/mobile");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <Card className="max-w-md w-full space-y-8">
@@ -59,6 +63,9 @@ const Login = () => {
           <div className="pt-4 border-t">
             <Button onClick={handleViewDetails} variant="outline" className="w-full">
               View Participant Details
+            </Button>
+            <Button onClick={handleidsearch} variant="outline" className="w-full">
+              Find Identification number
             </Button>
           </div>
         </CardContent>
