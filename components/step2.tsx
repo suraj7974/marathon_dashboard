@@ -120,7 +120,7 @@ const TShirtDistribution = () => {
       <div className="container mx-auto px-4 py-8">
         <Card className="w-full mx-auto shadow-md">
           <CardHeader className="border-b">
-            <CardTitle className="text-xl font-semibold text-center">Tshirt Dashboard</CardTitle>
+            <CardTitle className="text-xl font-semibold text-center">T-shirt Distribution</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">
             <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
@@ -153,7 +153,7 @@ const TShirtDistribution = () => {
             )}
 
             {participant && (
-              <>
+              <div className="space-y-6">
                 <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:px-8 md:px-16 lg:px-32">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
                     <ParticipantDetailItem icon={User} label="Name" value={`${participant.first_name} ${participant.last_name}`} iconColor="text-blue-500" />
@@ -207,11 +207,10 @@ const TShirtDistribution = () => {
                   </div>
                 </div>
 
-                <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32 mt-6">
+                <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
                   <div className="flex flex-col gap-4">
                     <h3 className="font-medium text-lg">T-shirt Distribution Status</h3>
-
-                    <div className="flex items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                       <div
                         className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
                           participant.received_tshirt ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
@@ -221,11 +220,11 @@ const TShirtDistribution = () => {
                       </div>
 
                       {canDistributeTshirt() ? (
-                        <div className="flex gap-3">
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                           <Button
                             onClick={() => handleUpdateTshirtStatus(true)}
                             disabled={updatingTshirt || participant.received_tshirt}
-                            className="bg-green-600 hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
                           >
                             <Check className="w-4 h-4 mr-2" />
                             Mark as Distributed
@@ -234,7 +233,7 @@ const TShirtDistribution = () => {
                             onClick={() => handleUpdateTshirtStatus(false)}
                             disabled={updatingTshirt || !participant.received_tshirt}
                             variant="outline"
-                            className="border-red-200 text-red-600 hover:bg-red-50"
+                            className="border-red-200 text-red-600 hover:bg-red-50 w-full sm:w-auto"
                           >
                             <X className="w-4 h-4 mr-2" />
                             Mark as Not Distributed
@@ -250,7 +249,7 @@ const TShirtDistribution = () => {
                     </div>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </CardContent>
         </Card>
