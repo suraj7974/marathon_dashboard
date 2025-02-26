@@ -7,6 +7,7 @@ import { Search, User, CreditCard, Trophy, MapPin, FileCheck, Shield, AlertTrian
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
+import { sendBibAllocationNotification, getCategoryText } from "../lib/notifications";
 
 const BibDistribution = () => {
   const [participantNumber, setParticipantNumber] = useState("");
@@ -16,6 +17,7 @@ const BibDistribution = () => {
   const [newBibNumber, setNewBibNumber] = useState("");
   const [bibError, setBibError] = useState("");
   const [updatingBib, setUpdatingBib] = useState(false);
+  const [notificationStatus, setNotificationStatus] = useState<string>("");
 
   const fetchParticipantDetails = async (number: string) => {
     setLoading(true);
@@ -146,7 +148,27 @@ const BibDistribution = () => {
       setParticipant(data);
       setNewBibNumber("");
       setBibError("");
+
+      try {
+        setNotificationStatus("Sending notification...");
+
+        const { mobile } = data;
+        const category = getCategoryText(data.race_category || "10KM", data.is_from_narayanpur);
+
+        const notificationResult = await sendBibAllocationNotification(mobile, bibNumber, category);
+
+        if (notificationResult.success) {
+          setNotificationStatus("WhatsApp notification sent successfully!");
+        } else {
+          console.error("Notification failed:", notificationResult.message);
+          setNotificationStatus(`Notification failed: ${notificationResult.message}`);
+        }
+      } catch (notificationError) {
+        console.error("Failed to send notification:", notificationError);
+        setNotificationStatus("Failed to send WhatsApp notification");
+      }
     } catch (err) {
+      console.error("BIB update error:", err);
       setError("Failed to update bib number");
     } finally {
       setUpdatingBib(false);
@@ -291,11 +313,13 @@ const BibDistribution = () => {
                     <h3 className="font-medium text-lg">BIB Number Assignment</h3>
 
                     {participant.bib_num ? (
-                      <div className="flex items-center gap-3">
-                        <Hash className="w-6 h-6 text-green-600" />
-                        <div>
-                          <div className="text-2xl font-bold">{participant.bib_num}</div>
-                          <div className="text-green-600 text-sm">BIB already allocated</div>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-3">
+                          <Hash className="w-6 h-6 text-green-600" />
+                          <div>
+                            <div className="text-2xl font-bold">{participant.bib_num}</div>
+                            <div className="text-green-600 text-sm">BIB already allocated</div>
+                          </div>
                         </div>
                       </div>
                     ) : (
@@ -335,6 +359,20 @@ const BibDistribution = () => {
                                   {bibError}
                                 </AlertDescription>
                               </Alert>
+                            )}
+
+                            {notificationStatus && (
+                              <div
+                                className={`mt-3 text-sm ${
+                                  notificationStatus.includes("success")
+                                    ? "text-green-600"
+                                    : notificationStatus.includes("Sending")
+                                    ? "text-blue-600"
+                                    : "text-amber-600"
+                                }`}
+                              >
+                                {notificationStatus}
+                              </div>
                             )}
                           </>
                         ) : (
