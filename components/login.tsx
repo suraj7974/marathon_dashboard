@@ -5,6 +5,7 @@ import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
 import { authenticate, setStoredAuth } from "../lib/auth";
+import { setSessionStartTime } from "../lib/session-timeout";
 
 const Login = () => {
   const [password, setPassword] = useState("");
@@ -14,6 +15,7 @@ const Login = () => {
   const handleLogin = (role: "payment" | "shirt" | "bib" | "govt") => {
     if (authenticate(role, password)) {
       setStoredAuth(role);
+      setSessionStartTime();
       navigate(role === "payment" ? "/" : `/${role}`);
     } else {
       setError("Invalid password");
