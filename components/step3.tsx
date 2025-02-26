@@ -192,6 +192,7 @@ const BibDistribution = () => {
 
   const canAssignBib = (participant: Participant): { allowed: boolean; message: string } => {
     if (participant.is_from_narayanpur) {
+      // For Narayanpur participants: check govt ID verification
       if (!participant.govt_id_verified) {
         return {
           allowed: false,
@@ -199,13 +200,27 @@ const BibDistribution = () => {
         };
       }
     } else {
+      // For non-Narayanpur participants:
+      // 1. T-shirt must be collected
       if (!participant.received_tshirt) {
         return {
           allowed: false,
           message: "T-shirt must be collected before BIB assignment",
         };
       }
+
+      // 2. Check if payment is completed (either online or offline)
+      const paymentComplete = participant.payment_status === "DONE" || participant.payment_offline === true;
+
+      if (!paymentComplete) {
+        return {
+          allowed: false,
+          message: "Payment must be completed before BIB assignment",
+        };
+      }
     }
+
+    // All conditions passed
     return { allowed: true, message: "" };
   };
 
@@ -259,10 +274,10 @@ const BibDistribution = () => {
                         <div className="mt-1">
                           <span
                             className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                              participant.payment_status === "DONE" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
+                              participant.payment_status === "DONE" || participant.payment_offline ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
                             }`}
                           >
-                            {participant.payment_status}
+                            {participant.payment_status === "DONE" || participant.payment_offline ? "DONE" : participant.payment_status}
                           </span>
                         </div>
                       </div>

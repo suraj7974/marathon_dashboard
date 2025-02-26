@@ -98,7 +98,7 @@ const TShirtDistribution = () => {
     if (participant.is_from_narayanpur) {
       return participant.payment_shirt;
     } else {
-      return participant.payment_status === "DONE";
+      return participant.payment_status === "DONE" || participant.payment_offline === true;
     }
   };
 
@@ -110,7 +110,7 @@ const TShirtDistribution = () => {
       };
     }
     return {
-      status: participant.payment_status,
+      status: participant.payment_status === "DONE" || participant.payment_offline ? "DONE" : participant.payment_status,
       label: "Payment Status",
     };
   };
