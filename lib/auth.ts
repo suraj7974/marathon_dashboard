@@ -1,11 +1,11 @@
 type Role = "payment" | "shirt" | "bib" | "govt" | "tshirt";
 
 const PASSWORDS = {
-  payment: "payment123",
-  shirt: "shirt123",
-  bib: "bib123",
-  govt: "govt123",
-  tshirt: "sales123",
+  payment: "suraj79",
+  shirt: "shub79",
+  bib: "prat79",
+  govt: "vipi79",
+  tshirt: "prab79",
 };
 
 export const authenticate = (role: Role, password: string): boolean => {
