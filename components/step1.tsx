@@ -160,15 +160,26 @@ const PaymentVerify = () => {
     console.log(`Processing ${method} payment for ${participant.identification_number}`);
 
     try {
-      const { data, error } = await supabase
-        .from("registrations")
-        .update({
+      let updates = {};
+
+      // Different update logic based on participant type
+      if (participant.is_from_narayanpur) {
+        // For Narayanpur participants, update payment_shirt status
+        updates = {
+          payment_shirt: true,
+          payment_offline_method: method,
+        };
+      } else {
+        // For non-Narayanpur participants, update payment_offline status
+        updates = {
           payment_status: "DONE",
           payment_offline: true,
           payment_offline_method: method,
-        })
-        .eq("identification_number", participant.identification_number)
-        .select();
+        };
+      }
+
+      // Execute the update
+      const { data, error } = await supabase.from("registrations").update(updates).eq("identification_number", participant.identification_number).select();
 
       if (error) {
         console.error("Supabase error:", error);
@@ -180,9 +191,7 @@ const PaymentVerify = () => {
       // Update local state
       setParticipant({
         ...participant,
-        payment_status: "DONE",
-        payment_offline: true,
-        payment_offline_method: method,
+        ...updates,
       });
 
       setDebugInfo(`Payment successfully marked as ${method}`);
@@ -340,12 +349,16 @@ const PaymentVerify = () => {
     );
   };
 
-  // Modified special payment section to show debug info
+  // Modified special payment section to show for all participants
   const getSpecialPaymentSection = () => {
     if (!participant) return null;
 
-    // If payment is already confirmed, don't show special payment options
-    if (participant.payment_status === "DONE" || participant.payment_offline === true) {
+    // Don't show special payment options if payment is already complete
+    const paymentComplete =
+      (participant.is_from_narayanpur && participant.payment_shirt) ||
+      (!participant.is_from_narayanpur && (participant.payment_status === "DONE" || participant.payment_offline === true));
+
+    if (paymentComplete) {
       return null;
     }
 
