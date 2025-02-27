@@ -98,7 +98,8 @@ const TshirtSales = () => {
           quantity_left: newQuantity,
           registration: false,
           payment_method: paymentMethod,
-          mobile: mobileNumber.trim() // Store the mobile number
+          mobile: mobileNumber.trim(),
+          quantity_sold: quantity  // Store the mobile number
         });
 
       if (updateError) {

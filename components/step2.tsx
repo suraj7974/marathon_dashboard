@@ -107,7 +107,8 @@ const TShirtDistribution = () => {
             payment_method: participant.payment_offline_method || "NULL",
             quantity_left: newQuantity,
             mobile: participant.mobile,
-            identification_number: participant.identification_number
+            identification_number: participant.identification_number,
+            quantity_sold: 1
           });
 
         if (insertError) throw insertError;
