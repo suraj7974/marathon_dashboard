@@ -3,17 +3,34 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, Calendar, Mail, Phone, CreditCard, MapPin, Trophy, FileCheck, Shield, AlertTriangle, Home, DollarSign, QrCode, Coins } from "lucide-react";
+import {
+  Search,
+  User,
+  Calendar,
+  Mail,
+  Phone,
+  CreditCard,
+  MapPin,
+  Trophy,
+  FileCheck,
+  Shield,
+  AlertTriangle,
+  Home,
+  DollarSign,
+  QrCode,
+  Coins,
+  Building,
+} from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
 
 const getIdType = (id: string): string => {
   if (!id) return "";
-  
+
   // Remove any spaces from the ID
-  const cleanId = id.replace(/\s/g, '');
-  
+  const cleanId = id.replace(/\s/g, "");
+
   if (/^\d{12}$/.test(cleanId)) {
     return "Aadhar Card";
   } else if (/^\d{9}[A-Z]$/.test(cleanId)) {
@@ -33,6 +50,9 @@ const PaymentVerify = () => {
   const [error, setError] = useState("");
   const [updatingPayment, setUpdatingPayment] = useState(false);
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [showSpecialPaymentOptions, setShowSpecialPaymentOptions] = useState(false);
+  const [updatingSpecialPayment, setUpdatingSpecialPayment] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
 
   const fetchParticipantDetails = async (number: string) => {
     setLoading(true);
@@ -81,7 +101,7 @@ const PaymentVerify = () => {
     setShowPaymentMethods(true);
   };
 
-  const handlePaymentAction = async (method: 'QR' | 'CASH') => {
+  const handlePaymentAction = async (method: "QR" | "CASH") => {
     if (!participant) return;
 
     setUpdatingPayment(true);
@@ -91,35 +111,35 @@ const PaymentVerify = () => {
         // For Narayanpur residents with verified ID, update payment_shirt
         const { error } = await supabase
           .from("registrations")
-          .update({ 
+          .update({
             payment_shirt: true,
-            payment_offline_method: method 
+            payment_offline_method: method,
           })
           .eq("identification_number", participant.identification_number);
-          
+
         if (error) throw error;
-        
+
         setParticipant({
           ...participant,
           payment_shirt: true,
-          payment_offline_method: method
+          payment_offline_method: method,
         });
       } else if (!participant.is_from_narayanpur) {
         // For non-Narayanpur residents, update payment_offline
         const { error } = await supabase
           .from("registrations")
-          .update({ 
+          .update({
             payment_offline: true,
-            payment_offline_method: method 
+            payment_offline_method: method,
           })
           .eq("identification_number", participant.identification_number);
-          
+
         if (error) throw error;
-        
+
         setParticipant({
           ...participant,
           payment_offline: true,
-          payment_offline_method: method
+          payment_offline_method: method,
         });
       }
     } catch (err) {
@@ -128,6 +148,55 @@ const PaymentVerify = () => {
       setUpdatingPayment(false);
       setShowPaymentMethods(false);
     }
+  };
+
+  const handleSpecialPaymentAction = async (method: "ROBINSON" | "DEPARTMENT") => {
+    if (!participant) return;
+
+    setDebugInfo("");
+    setError("");
+    setUpdatingSpecialPayment(true);
+
+    console.log(`Processing ${method} payment for ${participant.identification_number}`);
+
+    try {
+      const { data, error } = await supabase
+        .from("registrations")
+        .update({
+          payment_status: "DONE",
+          payment_offline: true,
+          payment_offline_method: method,
+        })
+        .eq("identification_number", participant.identification_number)
+        .select();
+
+      if (error) {
+        console.error("Supabase error:", error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+
+      console.log("Update successful:", data);
+
+      // Update local state
+      setParticipant({
+        ...participant,
+        payment_status: "DONE",
+        payment_offline: true,
+        payment_offline_method: method,
+      });
+
+      setDebugInfo(`Payment successfully marked as ${method}`);
+    } catch (err) {
+      console.error("Special payment update error:", err);
+      setError(`Failed to update payment: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setUpdatingSpecialPayment(false);
+      setShowSpecialPaymentOptions(false);
+    }
+  };
+
+  const handleSpecialPaymentInitiate = () => {
+    setShowSpecialPaymentOptions(true);
   };
 
   // Helper function to determine payment verification button state
@@ -148,7 +217,7 @@ const PaymentVerify = () => {
           </div>
         );
       }
-      
+
       // ID verified, check if t-shirt payment is done
       return (
         <div>
@@ -161,13 +230,7 @@ const PaymentVerify = () => {
               </div>
               {participant.payment_offline_method && (
                 <div className="text-gray-600 text-sm flex items-center">
-                  <div className="mr-1">
-                    {participant.payment_offline_method === 'QR' ? (
-                      <QrCode className="w-4 h-4" />
-                    ) : (
-                      <Coins className="w-4 h-4" />
-                    )}
-                  </div>
+                  <div className="mr-1">{participant.payment_offline_method === "QR" ? <QrCode className="w-4 h-4" /> : <Coins className="w-4 h-4" />}</div>
                   Paid via {participant.payment_offline_method}
                 </div>
               )}
@@ -179,7 +242,7 @@ const PaymentVerify = () => {
                   <p className="text-sm text-gray-600 mb-2">Select payment method:</p>
                   <div className="flex flex-col sm:flex-row gap-4">
                     <Button
-                      onClick={() => handlePaymentAction('QR')}
+                      onClick={() => handlePaymentAction("QR")}
                       disabled={updatingPayment}
                       className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 px-6 py-2 flex items-center justify-center"
                     >
@@ -187,7 +250,7 @@ const PaymentVerify = () => {
                       {updatingPayment ? "Processing..." : "QR Payment"}
                     </Button>
                     <Button
-                      onClick={() => handlePaymentAction('CASH')}
+                      onClick={() => handlePaymentAction("CASH")}
                       disabled={updatingPayment}
                       className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2 flex items-center justify-center"
                     >
@@ -197,10 +260,7 @@ const PaymentVerify = () => {
                   </div>
                 </div>
               ) : (
-                <Button
-                  onClick={handlePaymentInitiate}
-                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2"
-                >
+                <Button onClick={handlePaymentInitiate} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2">
                   Mark T-shirt as Paid
                 </Button>
               )}
@@ -209,7 +269,7 @@ const PaymentVerify = () => {
         </div>
       );
     }
-    
+
     // Case 2: For non-Narayanpur residents
     // If payment is already marked as DONE
     if (participant.payment_status === "DONE") {
@@ -223,7 +283,7 @@ const PaymentVerify = () => {
         </div>
       );
     }
-    
+
     // If offline payment is already verified
     if (participant.payment_offline) {
       return (
@@ -236,13 +296,7 @@ const PaymentVerify = () => {
             </div>
             {participant.payment_offline_method && (
               <div className="text-gray-600 text-sm flex items-center">
-                <div className="mr-1">
-                  {participant.payment_offline_method === 'QR' ? (
-                    <QrCode className="w-4 h-4" />
-                  ) : (
-                    <Coins className="w-4 h-4" />
-                  )}
-                </div>
+                <div className="mr-1">{participant.payment_offline_method === "QR" ? <QrCode className="w-4 h-4" /> : <Coins className="w-4 h-4" />}</div>
                 Paid via {participant.payment_offline_method}
               </div>
             )}
@@ -250,7 +304,7 @@ const PaymentVerify = () => {
         </div>
       );
     }
-    
+
     // Payment pending, show payment options
     return (
       <div>
@@ -260,7 +314,7 @@ const PaymentVerify = () => {
             <p className="text-sm text-gray-600 mb-2">Select payment method:</p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Button
-                onClick={() => handlePaymentAction('QR')}
+                onClick={() => handlePaymentAction("QR")}
                 disabled={updatingPayment}
                 className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 px-6 py-2 flex items-center justify-center"
               >
@@ -268,7 +322,7 @@ const PaymentVerify = () => {
                 {updatingPayment ? "Processing..." : "QR Payment"}
               </Button>
               <Button
-                onClick={() => handlePaymentAction('CASH')}
+                onClick={() => handlePaymentAction("CASH")}
                 disabled={updatingPayment}
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2 flex items-center justify-center"
               >
@@ -278,12 +332,56 @@ const PaymentVerify = () => {
             </div>
           </div>
         ) : (
-          <Button
-            onClick={handlePaymentInitiate}
-            className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2"
-          >
+          <Button onClick={handlePaymentInitiate} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2">
             Mark as Paid
           </Button>
+        )}
+      </div>
+    );
+  };
+
+  // Modified special payment section to show debug info
+  const getSpecialPaymentSection = () => {
+    if (!participant) return null;
+
+    // If payment is already confirmed, don't show special payment options
+    if (participant.payment_status === "DONE" || participant.payment_offline === true) {
+      return null;
+    }
+
+    return (
+      <div className="mt-6 border-t pt-6">
+        <h3 className="font-medium text-lg mb-4">Special Payment Method</h3>
+
+        {showSpecialPaymentOptions ? (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 mb-2">Select special payment method:</p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button
+                onClick={() => handleSpecialPaymentAction("ROBINSON")}
+                disabled={updatingSpecialPayment}
+                className="w-full sm:w-auto bg-purple-600 hover:bg-purple-700 px-6 py-2 flex items-center justify-center"
+              >
+                <Building className="w-4 h-4 mr-2" />
+                {updatingSpecialPayment ? "Processing..." : "Robinson"}
+              </Button>
+              <Button
+                onClick={() => handleSpecialPaymentAction("DEPARTMENT")}
+                disabled={updatingSpecialPayment}
+                className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 px-6 py-2 flex items-center justify-center"
+              >
+                <Building className="w-4 h-4 mr-2" />
+                {updatingSpecialPayment ? "Processing..." : "Department"}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <Button onClick={handleSpecialPaymentInitiate} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 px-6 py-2">
+              Special Payment Method
+            </Button>
+            {debugInfo && <div className="text-sm text-green-600 bg-green-50 p-2 rounded border border-green-100">{debugInfo}</div>}
+          </div>
         )}
       </div>
     );
@@ -322,7 +420,10 @@ const PaymentVerify = () => {
 
             {error && (
               <Alert variant="destructive" className="mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  {error}
+                </AlertDescription>
               </Alert>
             )}
 
@@ -361,10 +462,10 @@ const PaymentVerify = () => {
                           >
                             {participant.payment_offline ? "Offline" : "Other"}
                           </span>
-                          
+
                           {participant.payment_offline && participant.payment_offline_method && (
                             <div className="flex items-center mt-1 text-sm text-gray-600">
-                              {participant.payment_offline_method === 'QR' ? (
+                              {participant.payment_offline_method === "QR" ? (
                                 <>
                                   <QrCode className="w-4 h-4 mr-1" />
                                   QR
@@ -407,18 +508,15 @@ const PaymentVerify = () => {
                           >
                             {participant.is_from_narayanpur ? "Yes" : "No"}
                           </span>
-                          
+
                           {participant.is_from_narayanpur && (
                             <div className="mt-1 text-sm">
                               <span className="font-medium">T-shirt Payment:</span>{" "}
                               <span className={participant.payment_shirt ? "text-green-600" : "text-amber-600"}>
                                 {participant.payment_shirt ? "Verified" : "Not Verified"}
                               </span>
-                              
                               {participant.payment_shirt && participant.payment_offline_method && (
-                                <span className="ml-2 text-gray-600">
-                                  ({participant.payment_offline_method})
-                                </span>
+                                <span className="ml-2 text-gray-600">({participant.payment_offline_method})</span>
                               )}
                             </div>
                           )}
@@ -464,6 +562,7 @@ const PaymentVerify = () => {
 
                 <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:px-16 lg:px-32">
                   {getPaymentVerificationSection()}
+                  {getSpecialPaymentSection()}
                 </div>
               </div>
             )}
