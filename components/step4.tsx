@@ -376,9 +376,6 @@ const HospitalityKitDistribution = () => {
     // Cannot allocate for local participants
     if (participant.is_from_narayanpur) return false;
     
-    // Must have received kit first
-    if (!participant.kits) return false;
-    
     // Payment must be complete
     if (participant.payment_status !== "DONE" && !participant.payment_offline) return false;
     
@@ -509,62 +506,58 @@ const HospitalityKitDistribution = () => {
                   </div>
                 </div>
                 
-                {participant.kits && (
-                  <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
-                    <div className="flex flex-col gap-4">
-                      <h3 className="font-medium text-lg">Accommodation Allocation Status</h3>
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        <div
-                          className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                            participant.accommodation_allocated ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {participant.accommodation_allocated ? "Accommodation Allocated" : "Accommodation Not Allocated"}
-                        </div>
-
-                        {canAllocateAccommodation() ? (
-                          <Button onClick={handleAllocateAccommodation} disabled={allocatingAccommodation} className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
-                            {allocatingAccommodation ? (
-                              "Processing..."
-                            ) : (
-                              <>
-                                <Hotel className="w-4 h-4 mr-2" />
-                                Allocate Accommodation
-                              </>
-                            )}
-                          </Button>
-                        ) : participant.accommodation_allocated ? (
-                          <div className="text-green-600 text-sm flex items-center">
-                            <Check className="w-4 h-4 mr-1" />
-                            Accommodation has been allocated
-                          </div>
-                        ) : (
-                          <div className="text-red-600 text-sm flex items-center">
-                            <AlertCircle className="w-4 h-4 mr-1" />
-                            {participant.is_from_narayanpur 
-                              ? "Local participants are not eligible for accommodation" 
-                              : !participant.kits 
-                                ? "Kit must be distributed before allocating accommodation"
-                                : participant.payment_status !== "DONE" && !participant.payment_offline
-                                  ? "Payment must be completed before allocating accommodation"
-                                  : "Cannot allocate accommodation at this time"}
-                          </div>
-                        )}
+                <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
+                  <div className="flex flex-col gap-4">
+                    <h3 className="font-medium text-lg">Accommodation Allocation Status</h3>
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <div
+                        className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                          participant.accommodation_allocated ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                        }`}
+                      >
+                        {participant.accommodation_allocated ? "Accommodation Allocated" : "Accommodation Not Allocated"}
                       </div>
 
-                      {accommodationInfo && (
-                        <div className="mt-3 text-sm text-green-600 bg-green-50 p-2 rounded border border-green-100">{accommodationInfo}</div>
-                      )}
-                      
-                      {participant.accommodation_allocated && participant.accommodation_venue && (
-                        <div className="mt-3 bg-blue-50 p-3 rounded border border-blue-100">
-                          <h4 className="font-medium text-blue-700">Accommodation Details</h4>
-                          <p className="text-blue-600 mt-1">Venue: {participant.accommodation_venue}</p>
+                      {canAllocateAccommodation() ? (
+                        <Button onClick={handleAllocateAccommodation} disabled={allocatingAccommodation} className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
+                          {allocatingAccommodation ? (
+                            "Processing..."
+                          ) : (
+                            <>
+                              <Hotel className="w-4 h-4 mr-2" />
+                              Allocate Accommodation
+                            </>
+                          )}
+                        </Button>
+                      ) : participant.accommodation_allocated ? (
+                        <div className="text-green-600 text-sm flex items-center">
+                          <Check className="w-4 h-4 mr-1" />
+                          Accommodation has been allocated
+                        </div>
+                      ) : (
+                        <div className="text-red-600 text-sm flex items-center">
+                          <AlertCircle className="w-4 h-4 mr-1" />
+                          {participant.is_from_narayanpur 
+                            ? "Local participants are not eligible for accommodation" 
+                            : participant.payment_status !== "DONE" && !participant.payment_offline
+                              ? "Payment must be completed before allocating accommodation"
+                              : "Cannot allocate accommodation at this time"}
                         </div>
                       )}
                     </div>
+
+                    {accommodationInfo && (
+                      <div className="mt-3 text-sm text-green-600 bg-green-50 p-2 rounded border border-green-100">{accommodationInfo}</div>
+                    )}
+                    
+                    {participant.accommodation_allocated && participant.accommodation_venue && (
+                      <div className="mt-3 bg-blue-50 p-3 rounded border border-blue-100">
+                        <h4 className="font-medium text-blue-700">Accommodation Details</h4>
+                        <p className="text-blue-600 mt-1">Venue: {participant.accommodation_venue}</p>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
           </CardContent>
