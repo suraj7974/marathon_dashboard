@@ -12,7 +12,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (role: "payment" | "shirt" | "bib" | "govt" | "tshirt") => {
+  const handleLogin = (role: "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit") => {
     if (authenticate(role, password)) {
       setStoredAuth(role);
       setSessionStartTime();
@@ -60,6 +60,9 @@ const Login = () => {
             </Button>
             <Button onClick={() => handleLogin("tshirt")} className="w-full">
               Sell T-shirt
+            </Button>
+            <Button onClick={() => handleLogin("kit")} className="w-full">
+              kits
             </Button>
           </div>
 

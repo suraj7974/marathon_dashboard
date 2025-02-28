@@ -18,4 +18,6 @@ export interface Participant {
   payment_shirt: boolean;
   payment_offline: boolean;
   payment_offline_method: string;
+  kits: boolean;
+  special_payment_type?: string;
 }

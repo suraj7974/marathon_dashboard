@@ -4,10 +4,11 @@ import Login from "../components/login";
 import PaymentVerify from "../components/step1";
 import TShirtDistribution from "../components/step2";
 import BibDistribution from "../components/step3";
+import HospitalityKitDistribution from "../components/step4";
 import ViewDetails from "../components/viewdetails";
 import GovernmentIdVerification from "../components/step0";
 import MobileSearch from "../components/mobilesearch";
-import TshirtSales from "../components/tshirt"
+import TshirtSales from "../components/tshirt";
 import "./App.css";
 
 function App() {
@@ -15,8 +16,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/mobile" element={<MobileSearch/>}/>
-        <Route path="/tshirt" element={<TshirtSales/>}/>
+        <Route path="/mobile" element={<MobileSearch />} />
+        <Route path="/tshirt" element={<TshirtSales />} />
 
         <Route
           path="/"
@@ -50,6 +51,15 @@ function App() {
           element={
             <ProtectedRoute requiredRole="govt">
               <GovernmentIdVerification />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/kit"
+          element={
+            <ProtectedRoute requiredRole="kit">
+              <HospitalityKitDistribution />
             </ProtectedRoute>
           }
         />
