@@ -118,7 +118,7 @@ const HospitalityKitDistribution = () => {
     setAllocatingAccommodation(true);
     setError("");
     setAccommodationInfo("");
-    
+
     try {
       // Determine if eligible for accommodation
       if (participant.is_from_narayanpur) {
@@ -130,38 +130,33 @@ const HospitalityKitDistribution = () => {
         setError("Payment must be completed before allocating accommodation");
         return;
       }
-      
+
       // Get participant's state and city
-      const participantCity = participant.city ? participant.city.toLowerCase() : '';
-      const participantState = participant.state ? participant.state.toLowerCase() : '';
+      const participantCity = participant.city ? participant.city.toLowerCase() : "";
+      const participantState = participant.state ? participant.state.toLowerCase() : "";
       let cityToSearch = participantCity;
-      
+
       // If not from Chhattisgarh, use "other"
-      if (participantState.toLowerCase() !== 'chhattisgarh') {
-        cityToSearch = 'other';
+      if (participantState.toLowerCase() !== "chhattisgarh") {
+        cityToSearch = "other";
       }
-      
+
       let allocatedVenue = "";
-      let allocatedId = null;
-      
-      if (participant.gender === 'FEMALE') {
+
+      if (participant.gender === "FEMALE") {
         // First, find the venue from female_stay_inventory based on city
-        const { data: venueData, error: venueError } = await supabase
-          .from('female_stay_inventory')
-          .select('venue')
-          .ilike('city', cityToSearch)
-          .maybeSingle();
-          
+        const { data: venueData, error: venueError } = await supabase.from("female_stay_inventory").select("venue").ilike("city", cityToSearch).maybeSingle();
+
         if (venueError) throw venueError;
-        
+
         if (!venueData) {
           // If no venue found for this city, use "other"
           const { data: otherVenueData, error: otherVenueError } = await supabase
-            .from('female_stay_inventory')
-            .select('venue')
-            .eq('city', 'other')
+            .from("female_stay_inventory")
+            .select("venue")
+            .eq("city", "other")
             .maybeSingle();
-            
+
           if (otherVenueError) throw otherVenueError;
           if (otherVenueData) {
             allocatedVenue = otherVenueData.venue;
@@ -171,75 +166,55 @@ const HospitalityKitDistribution = () => {
         } else {
           allocatedVenue = venueData.venue;
         }
-        
+
         // Now check availability in venue_female and allocate
-        const { data: venueAvailability, error: availabilityError } = await supabase
-          .from('venue_female')
-          .select('*')
-          .eq('name', allocatedVenue)
-          .maybeSingle();
-          
+        const { data: venueAvailability, error: availabilityError } = await supabase.from("venue_female").select("*").eq("name", allocatedVenue).maybeSingle();
+
         if (availabilityError) throw availabilityError;
-        
+
         if (!venueAvailability) {
           throw new Error(`Venue ${allocatedVenue} not found in the system`);
         }
-        
+
         // Check if venue has capacity
         if (venueAvailability.allocated < venueAvailability.total_count) {
           // Update allocation count
           const { error: updateError } = await supabase
-            .from('venue_female')
+            .from("venue_female")
             .update({ allocated: venueAvailability.allocated + 1 })
-            .eq('id', venueAvailability.id);
-            
+            .eq("id", venueAvailability.id);
+
           if (updateError) throw updateError;
-          
-          allocatedId = venueAvailability.id;
         } else {
           // Allocate to reserve venue
           allocatedVenue = "Reserve_LiveliHood";
-          
+
           // Get the LiveliHood venue and update it
-          const { data: reserveVenue, error: reserveError } = await supabase
-            .from('venue_female')
-            .select('*')
-            .eq('name', 'Reserve_LiveliHood')
-            .maybeSingle();
-            
+          const { data: reserveVenue, error: reserveError } = await supabase.from("venue_female").select("*").eq("name", "Reserve_LiveliHood").maybeSingle();
+
           if (reserveError) throw reserveError;
-          
+
           if (reserveVenue) {
             const { error: updateReserveError } = await supabase
-              .from('venue_female')
+              .from("venue_female")
               .update({ allocated: reserveVenue.allocated + 1 })
-              .eq('id', reserveVenue.id);
-              
+              .eq("id", reserveVenue.id);
+
             if (updateReserveError) throw updateReserveError;
-            
-            allocatedId = reserveVenue.id;
           } else {
             throw new Error("Reserve venue not found");
           }
         }
       } else {
         // Handle male accommodation
-        const { data: venueData, error: venueError } = await supabase
-          .from('male_stay_inventory')
-          .select('venue')
-          .ilike('city', cityToSearch)
-          .maybeSingle();
-          
+        const { data: venueData, error: venueError } = await supabase.from("male_stay_inventory").select("venue").ilike("city", cityToSearch).maybeSingle();
+
         if (venueError) throw venueError;
-        
+
         if (!venueData) {
           // If no venue found for this city, use "other"
-          const { data: otherVenueData, error: otherVenueError } = await supabase
-            .from('male_stay_inventory')
-            .select('venue')
-            .eq('city', 'other')
-            .maybeSingle();
-            
+          const { data: otherVenueData, error: otherVenueError } = await supabase.from("male_stay_inventory").select("venue").eq("city", "other").maybeSingle();
+
           if (otherVenueError) throw otherVenueError;
           if (otherVenueData) {
             allocatedVenue = otherVenueData.venue;
@@ -249,109 +224,92 @@ const HospitalityKitDistribution = () => {
         } else {
           allocatedVenue = venueData.venue;
         }
-        
+
         // Now check availability in venue_male and allocate
-        const { data: venueAvailability, error: availabilityError } = await supabase
-          .from('venue_male')
-          .select('*')
-          .eq('name', allocatedVenue)
-          .maybeSingle();
-          
+        const { data: venueAvailability, error: availabilityError } = await supabase.from("venue_male").select("*").eq("name", allocatedVenue).maybeSingle();
+
         if (availabilityError) throw availabilityError;
-        
+
         if (!venueAvailability) {
           throw new Error(`Venue ${allocatedVenue} not found in the system`);
         }
-        
+
         // Check if venue has capacity
         if (venueAvailability.allocated < venueAvailability.total_count) {
           // Update allocation count
           const { error: updateError } = await supabase
-            .from('venue_male')
+            .from("venue_male")
             .update({ allocated: venueAvailability.allocated + 1 })
-            .eq('id', venueAvailability.id);
-            
+            .eq("id", venueAvailability.id);
+
           if (updateError) throw updateError;
-          
-          allocatedId = venueAvailability.id;
         } else {
           // Try to allocate to one of the reserve venues
-          const reserveVenues = ['ramoutin college', 'Dewangan bhavan', 'Officer Club', 'Muslim venue'];
-          
+          const reserveVenues = ["ramoutin college", "Dewangan bhavan", "Officer Club", "Muslim venue"];
+
           // Find a reserve venue with availability
           let reserveVenueFound = false;
-          
+
           for (const reserveName of reserveVenues) {
-            const { data: reserveVenue, error: reserveError } = await supabase
-              .from('venue_male')
-              .select('*')
-              .eq('name', reserveName)
-              .maybeSingle();
-              
+            const { data: reserveVenue, error: reserveError } = await supabase.from("venue_male").select("*").eq("name", reserveName).maybeSingle();
+
             if (reserveError) continue;
-            
+
             if (reserveVenue && reserveVenue.allocated < reserveVenue.total_count) {
               const { error: updateReserveError } = await supabase
-                .from('venue_male')
+                .from("venue_male")
                 .update({ allocated: reserveVenue.allocated + 1 })
-                .eq('id', reserveVenue.id);
-                
+                .eq("id", reserveVenue.id);
+
               if (updateReserveError) continue;
-              
+
               allocatedVenue = reserveName;
-              allocatedId = reserveVenue.id;
               reserveVenueFound = true;
               break;
             }
           }
-          
+
           if (!reserveVenueFound) {
             // All reserve venues are full, assign to the first one anyway
-            const { data: firstReserve, error: firstReserveError } = await supabase
-              .from('venue_male')
-              .select('*')
-              .eq('name', reserveVenues[0])
-              .maybeSingle();
-              
+            const { data: firstReserve, error: firstReserveError } = await supabase.from("venue_male").select("*").eq("name", reserveVenues[0]).maybeSingle();
+
             if (firstReserveError) throw firstReserveError;
-            
+
             if (firstReserve) {
               const { error: updateFirstReserveError } = await supabase
-                .from('venue_male')
+                .from("venue_male")
                 .update({ allocated: firstReserve.allocated + 1 })
-                .eq('id', firstReserve.id);
-                
+                .eq("id", firstReserve.id);
+
               if (updateFirstReserveError) throw updateFirstReserveError;
-              
+
               allocatedVenue = reserveVenues[0];
-              allocatedId = firstReserve.id;
             } else {
               throw new Error("No reserve venues found");
             }
           }
         }
       }
-      
+
       // Update participant record with allocated venue
       const { error: updateParticipantError } = await supabase
-        .from('registrations')
-        .update({ 
+        .from("registrations")
+        .update({
           accommodation_venue: allocatedVenue,
-          accommodation_allocated: true 
+          accommodation_allocated: true,
         })
-        .eq('identification_number', participant.identification_number);
-        
+        .eq("identification_number", participant.identification_number);
+
       if (updateParticipantError) throw updateParticipantError;
-      
+
       // Update local state
       setParticipant({
         ...participant,
         accommodation_venue: allocatedVenue,
-        accommodation_allocated: true
+        accommodation_allocated: true,
       });
-      
+
       setAccommodationInfo(`Successfully allocated to: ${allocatedVenue}`);
-      
     } catch (err) {
       console.error("Accommodation allocation error:", err);
       setError("Failed to allocate accommodation: " + (err instanceof Error ? err.message : "Unknown error"));
@@ -369,16 +327,16 @@ const HospitalityKitDistribution = () => {
     // Can distribute if payment is complete and kit not already distributed
     return (participant.payment_status === "DONE" || participant.payment_offline === true) && !participant.kits;
   };
-  
+
   const canAllocateAccommodation = () => {
     if (!participant) return false;
-    
+
     // Cannot allocate for local participants
     if (participant.is_from_narayanpur) return false;
-    
+
     // Payment must be complete
     if (participant.payment_status !== "DONE" && !participant.payment_offline) return false;
-    
+
     // Must not already have accommodation allocated
     return !participant.accommodation_allocated;
   };
@@ -439,7 +397,7 @@ const HospitalityKitDistribution = () => {
                     <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_category || "10KM"} iconColor="text-indigo-500" />
 
                     <ParticipantDetailItem icon={MapPin} label="City" value={participant.city || "Not specified"} iconColor="text-orange-500" />
-                    
+
                     <ParticipantDetailItem icon={User} label="Gender" value={participant.gender || "Not specified"} iconColor="text-purple-500" />
 
                     <ParticipantDetailItem
@@ -455,7 +413,7 @@ const HospitalityKitDistribution = () => {
                       value={participant.is_from_narayanpur ? "Narayanpur (Local)" : "Outside Narayanpur"}
                       iconColor="text-teal-500"
                     />
-                    
+
                     <ParticipantDetailItem
                       icon={Hotel}
                       label="Accommodation"
@@ -505,7 +463,7 @@ const HospitalityKitDistribution = () => {
                     {debugInfo && <div className="mt-3 text-sm text-green-600 bg-green-50 p-2 rounded border border-green-100">{debugInfo}</div>}
                   </div>
                 </div>
-                
+
                 <div className="bg-white rounded-lg p-4 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
                   <div className="flex flex-col gap-4">
                     <h3 className="font-medium text-lg">Accommodation Allocation Status</h3>
@@ -519,7 +477,11 @@ const HospitalityKitDistribution = () => {
                       </div>
 
                       {canAllocateAccommodation() ? (
-                        <Button onClick={handleAllocateAccommodation} disabled={allocatingAccommodation} className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto">
+                        <Button
+                          onClick={handleAllocateAccommodation}
+                          disabled={allocatingAccommodation}
+                          className="bg-indigo-600 hover:bg-indigo-700 w-full sm:w-auto"
+                        >
                           {allocatingAccommodation ? (
                             "Processing..."
                           ) : (
@@ -537,11 +499,11 @@ const HospitalityKitDistribution = () => {
                       ) : (
                         <div className="text-red-600 text-sm flex items-center">
                           <AlertCircle className="w-4 h-4 mr-1" />
-                          {participant.is_from_narayanpur 
-                            ? "Local participants are not eligible for accommodation" 
+                          {participant.is_from_narayanpur
+                            ? "Local participants are not eligible for accommodation"
                             : participant.payment_status !== "DONE" && !participant.payment_offline
-                              ? "Payment must be completed before allocating accommodation"
-                              : "Cannot allocate accommodation at this time"}
+                            ? "Payment must be completed before allocating accommodation"
+                            : "Cannot allocate accommodation at this time"}
                         </div>
                       )}
                     </div>
@@ -549,7 +511,7 @@ const HospitalityKitDistribution = () => {
                     {accommodationInfo && (
                       <div className="mt-3 text-sm text-green-600 bg-green-50 p-2 rounded border border-green-100">{accommodationInfo}</div>
                     )}
-                    
+
                     {participant.accommodation_allocated && participant.accommodation_venue && (
                       <div className="mt-3 bg-blue-50 p-3 rounded border border-blue-100">
                         <h4 className="font-medium text-blue-700">Accommodation Details</h4>

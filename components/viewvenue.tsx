@@ -2,10 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 // import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "./ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "./ui/table";
 import { Input } from "./ui/input";
-import { Search, Hotel, Download, UserRound, Phone, X } from "lucide-react";
+import { Hotel, Download, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 
@@ -57,10 +57,7 @@ const AccommodationManagement = () => {
     setParticipants([]);
 
     try {
-      const { data, error: venueError } = await supabase
-        .from(`venue_${gender}`)
-        .select("*")
-        .order("name");
+      const { data, error: venueError } = await supabase.from(`venue_${gender}`).select("*").order("name");
 
       if (venueError) throw venueError;
 
@@ -79,7 +76,7 @@ const AccommodationManagement = () => {
 
   const fetchParticipantsForVenue = async (venue: string) => {
     if (!venue) return;
-    
+
     setLoadingParticipants(true);
     setError("");
 
@@ -135,33 +132,25 @@ const AccommodationManagement = () => {
 
   const exportToCSV = () => {
     if (filteredParticipants.length === 0) return;
-    
-    const headers = [
-      "ID Number", 
-      "Name", 
-      "Mobile", 
-      "Gender", 
-      "City", 
-      "State", 
-      "Race Category"
-    ];
-    
-    const csvData = filteredParticipants.map(p => [
+
+    const headers = ["ID Number", "Name", "Mobile", "Gender", "City", "State", "Race Category"];
+
+    const csvData = filteredParticipants.map((p) => [
       p.identification_number,
       `${p.first_name} ${p.last_name}`,
       p.mobile,
       p.gender,
       p.city || "N/A",
       p.state || "N/A",
-      p.race_category || "N/A"
+      p.race_category || "N/A",
     ]);
-    
+
     // Add headers as the first row
     csvData.unshift(headers);
-    
+
     // Convert data to CSV string
-    const csvString = csvData.map(row => row.join(",")).join("\n");
-    
+    const csvString = csvData.map((row) => row.join(",")).join("\n");
+
     // Create a blob and download
     const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
@@ -206,7 +195,7 @@ const AccommodationManagement = () => {
 
             <div className="bg-white p-6 rounded-lg border shadow-sm">
               <h3 className="text-lg font-medium mb-4">Available Venues</h3>
-              
+
               {loading ? (
                 <div className="text-center py-4">Loading venues...</div>
               ) : venues.length === 0 ? (
@@ -229,11 +218,7 @@ const AccommodationManagement = () => {
                           <TableCell>{venue.total_count}</TableCell>
                           <TableCell>{getVenueUtilization(venue)}</TableCell>
                           <TableCell>
-                            <Button 
-                              size="sm" 
-                              variant={selectedVenue === venue.name ? "default" : "outline"} 
-                              onClick={() => handleVenueChange(venue.name)}
-                            >
+                            <Button size="sm" variant={selectedVenue === venue.name ? "default" : "outline"} onClick={() => handleVenueChange(venue.name)}>
                               <Hotel className="h-4 w-4 mr-2" />
                               View Participants
                             </Button>
@@ -254,18 +239,9 @@ const AccommodationManagement = () => {
                   </h3>
                   <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                     <div className="relative w-full sm:w-64">
-                      <Input
-                        type="text"
-                        placeholder="Search by ID, name or mobile"
-                        value={searchQuery}
-                        onChange={handleSearchChange}
-                        className="pr-8"
-                      />
+                      <Input type="text" placeholder="Search by ID, name or mobile" value={searchQuery} onChange={handleSearchChange} className="pr-8" />
                       {searchQuery && (
-                        <button 
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                          onClick={clearSearch}
-                        >
+                        <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={clearSearch}>
                           <X className="h-4 w-4" />
                         </button>
                       )}
@@ -283,17 +259,13 @@ const AccommodationManagement = () => {
                   <div className="text-center py-4">Loading participants...</div>
                 ) : filteredParticipants.length === 0 ? (
                   <div className="text-center py-4 text-gray-500">
-                    {searchQuery
-                      ? "No matching participants found"
-                      : "No participants allocated to this venue yet"}
+                    {searchQuery ? "No matching participants found" : "No participants allocated to this venue yet"}
                   </div>
                 ) : (
                   <>
                     <div className="text-sm text-gray-500 mb-2">
-                      Showing {filteredParticipants.length} 
-                      {searchQuery && participants.length !== filteredParticipants.length 
-                        ? ` of ${participants.length}` 
-                        : ""} participants
+                      Showing {filteredParticipants.length}
+                      {searchQuery && participants.length !== filteredParticipants.length ? ` of ${participants.length}` : ""} participants
                     </div>
                     <div className="overflow-x-auto">
                       <Table>
