@@ -20,4 +20,7 @@ export interface Participant {
   payment_offline_method: string;
   kits: boolean;
   special_payment_type?: string;
+  state: string;
+  accommodation_allocated?: boolean;
+  accommodation_venue?: string;
 }
