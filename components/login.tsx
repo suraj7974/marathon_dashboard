@@ -58,9 +58,6 @@ const Login = () => {
             <Button onClick={() => handleLogin("bib")} className="w-full">
               BIB Section
             </Button>
-            <Button onClick={() => handleLogin("tshirt")} className="w-full">
-              Sell T-shirt
-            </Button>
             <Button onClick={() => handleLogin("kit")} className="w-full">
               kits
             </Button>
