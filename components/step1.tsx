@@ -270,7 +270,7 @@ const PaymentVerify = () => {
                 </div>
               ) : (
                 <Button onClick={handlePaymentInitiate} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2">
-                  Mark T-shirt as Paid
+                  Mark as Paid: 150
                 </Button>
               )}
             </div>
@@ -342,7 +342,7 @@ const PaymentVerify = () => {
           </div>
         ) : (
           <Button onClick={handlePaymentInitiate} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 px-6 py-2">
-            Mark as Paid
+            Mark as Paid: 300
           </Button>
         )}
       </div>
