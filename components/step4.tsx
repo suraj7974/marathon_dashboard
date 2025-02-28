@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, MapPin, Trophy, Shield, AlertTriangle, Check, X, Home, Package } from "lucide-react";
+import { Search, User, MapPin, Trophy, Shield, AlertTriangle, Check, Home, Package } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
@@ -87,11 +87,7 @@ const HospitalityKitDistribution = () => {
       }
 
       // Update the kits status to true (distributed)
-      const { data, error } = await supabase
-        .from("registrations")
-        .update({ kits: true })
-        .eq("identification_number", participant.identification_number)
-        .select();
+      const { error } = await supabase.from("registrations").update({ kits: true }).eq("identification_number", participant.identification_number).select();
 
       if (error) {
         console.error("Supabase error:", error);
