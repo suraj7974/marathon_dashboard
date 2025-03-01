@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, CreditCard, Trophy, Shirt, FileCheck, Shield, AlertTriangle, Check } from "lucide-react";
+import { Search, User, CreditCard, Trophy, Shirt, FileCheck, Shield, AlertTriangle, Check, X } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
@@ -67,12 +67,6 @@ const TShirtDistribution = () => {
   const handleUpdateTshirtStatus = async (received: boolean) => {
     if (!participant) return;
 
-    // Check if participant is from Narayanpur
-    if (participant.is_from_narayanpur) {
-      setError("Narayanpur residents should collect their T-shirts at 4 AM on race day");
-      return;
-    }
-
     setUpdatingTshirt(true);
     setError("");
 
@@ -112,7 +106,6 @@ const TShirtDistribution = () => {
           quantity_left: newQuantity,
           mobile: participant.mobile,
           identification_number: participant.identification_number,
-          quantity_sold: 1,
         });
 
         if (insertError) throw insertError;
@@ -137,32 +130,11 @@ const TShirtDistribution = () => {
 
   const canDistributeTshirt = () => {
     if (!participant) return false;
-
-    // Narayanpur participants can no longer receive T-shirts at distribution center
     if (participant.is_from_narayanpur) {
-      return false;
+      return participant.payment_shirt;
+    } else {
+      return participant.payment_status === "DONE" || participant.payment_offline === true;
     }
-
-    // Non-Narayanpur participants follow the standard payment rules
-    return participant.payment_status === "DONE" || participant.payment_offline === true;
-  };
-
-  const getDistributionMessage = () => {
-    if (!participant) return "";
-
-    if (participant.is_from_narayanpur) {
-      return "Narayanpur residents should collect their T-shirts at 4 AM on race day";
-    }
-
-    if (participant.received_tshirt) {
-      return "T-shirt has been distributed";
-    }
-
-    if (!(participant.payment_status === "DONE" || participant.payment_offline)) {
-      return "Payment is pending. Please complete the payment.";
-    }
-
-    return "";
   };
 
   const getPaymentStatusDisplay = (participant: Participant) => {
@@ -289,36 +261,45 @@ const TShirtDistribution = () => {
                       </div>
 
                       {canDistributeTshirt() ? (
-                        <Button
-                          onClick={() => handleUpdateTshirtStatus(true)}
-                          disabled={updatingTshirt || participant.received_tshirt}
-                          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
-                        >
-                          {updatingTshirt ? (
-                            "Processing..."
-                          ) : (
-                            <>
-                              <Check className="w-4 h-4 mr-2" />
-                              Mark as Distributed
-                            </>
-                          )}
-                        </Button>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                          <Button
+                            onClick={() => handleUpdateTshirtStatus(true)}
+                            disabled={updatingTshirt || participant.received_tshirt}
+                            className="bg-green-600 hover:bg-green-700 w-full sm:w-auto"
+                          >
+                            {updatingTshirt ? (
+                              "Processing..."
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4 mr-2" />
+                                Mark as Distributed
+                              </>
+                            )}
+                          </Button>
+                          <Button
+                            onClick={() => handleUpdateTshirtStatus(false)}
+                            disabled={updatingTshirt || !participant.received_tshirt}
+                            variant="outline"
+                            className="border-red-200 text-red-600 hover:bg-red-50 w-full sm:w-auto"
+                          >
+                            {updatingTshirt ? (
+                              "Processing..."
+                            ) : (
+                              <>
+                                <X className="w-4 h-4 mr-2" />
+                                Mark as Not Distributed
+                              </>
+                            )}
+                          </Button>
+                        </div>
                       ) : (
-                        <div className={`text-sm flex items-center ${participant.is_from_narayanpur ? "text-blue-600 font-medium" : "text-red-600"}`}>
-                          {participant.is_from_narayanpur && <AlertTriangle className="w-4 h-4 mr-1" />}
-                          {getDistributionMessage()}
+                        <div className="text-red-600 text-sm">
+                          {participant.is_from_narayanpur
+                            ? "Payment for T-shirt is pending. Please complete the payment."
+                            : "Payment is pending. Please complete the payment."}
                         </div>
                       )}
                     </div>
-
-                    {participant.is_from_narayanpur && (
-                      <div className="mt-3 bg-blue-50 p-2 rounded border border-blue-100 text-blue-700">
-                        <h4 className="font-medium">Important Notice for Narayanpur Participants:</h4>
-                        <p className="mt-1 text-sm">
-                          As per event policy, Narayanpur residents must collect their T-shirts at the starting point at 4 AM on race day.
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
