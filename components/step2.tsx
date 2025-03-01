@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, CreditCard, Trophy, Shirt, FileCheck, Shield, AlertTriangle, Check, X } from "lucide-react";
+import { Search, User, CreditCard, Trophy, Shirt, FileCheck, Shield, AlertTriangle, Check } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
