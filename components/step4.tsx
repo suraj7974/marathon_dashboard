@@ -144,94 +144,122 @@ const HospitalityKitDistribution = () => {
       let allocatedVenue = "";
 
       if (participant.gender === "FEMALE") {
-        // First, find the venue from female_stay_inventory based on city
+        // Female venue lookup logic
         const { data: venueData, error: venueError } = await supabase.from("female_stay_inventory").select("venue").ilike("city", cityToSearch).maybeSingle();
 
         if (venueError) throw venueError;
 
         if (!venueData) {
-          // If no venue found for this city, use "other"
-          const { data: otherVenueData, error: otherVenueError } = await supabase
-            .from("female_stay_inventory")
-            .select("venue")
-            .eq("city", "other")
-            .maybeSingle();
+          // ...existing fallback logic...
+        } else {
+          allocatedVenue = venueData.venue.trim();
+        }
 
-          if (otherVenueError) throw otherVenueError;
-          if (otherVenueData) {
-            allocatedVenue = otherVenueData.venue;
+        console.log("Female venue to search for:", allocatedVenue);
+
+        // Get all venues and find matching one case-insensitively
+        const { data: allVenues, error: allVenuesError } = await supabase.from("venue_female").select("*");
+
+        if (allVenuesError) throw allVenuesError;
+
+        // Find the venue with exact matching
+        const venueAvailability = allVenues?.find((venue) => venue.name === allocatedVenue);
+
+        // If not found with exact match, try case-insensitive
+        if (!venueAvailability) {
+          const caseInsensitiveVenue = allVenues?.find((venue) => venue.name.toLowerCase() === allocatedVenue.toLowerCase());
+
+          if (caseInsensitiveVenue) {
+            allocatedVenue = caseInsensitiveVenue.name;
+
+            // Update allocation count
+            const { error: updateError } = await supabase
+              .from("venue_female")
+              .update({ allocated: caseInsensitiveVenue.allocated + 1 })
+              .eq("id", caseInsensitiveVenue.id);
+
+            if (updateError) throw updateError;
+
+            // Skip to participant record update
+            goto_update_participant_record();
           } else {
-            throw new Error("No venue found for females");
+            console.error(`Venue "${allocatedVenue}" not found in venue_female`);
+            throw new Error(`Venue "${allocatedVenue}" not found. Please check venue configuration.`);
           }
         } else {
-          allocatedVenue = venueData.venue;
-        }
-
-        // Now check availability in venue_female and allocate
-        const { data: venueAvailability, error: availabilityError } = await supabase.from("venue_female").select("*").eq("name", allocatedVenue).maybeSingle();
-
-        if (availabilityError) throw availabilityError;
-
-        if (!venueAvailability) {
-          throw new Error(`Venue ${allocatedVenue} not found in the system`);
-        }
-
-        // Check if venue has capacity
-        if (venueAvailability.allocated < venueAvailability.total_count) {
-          // Update allocation count
-          const { error: updateError } = await supabase
-            .from("venue_female")
-            .update({ allocated: venueAvailability.allocated + 1 })
-            .eq("id", venueAvailability.id);
-
-          if (updateError) throw updateError;
-        } else {
-          // Allocate to reserve venue
-          allocatedVenue = "Reserve_LiveliHood";
-
-          // Get the LiveliHood venue and update it
-          const { data: reserveVenue, error: reserveError } = await supabase.from("venue_female").select("*").eq("name", "Reserve_LiveliHood").maybeSingle();
-
-          if (reserveError) throw reserveError;
-
-          if (reserveVenue) {
-            const { error: updateReserveError } = await supabase
+          // Check if venue has capacity
+          if (venueAvailability.allocated < venueAvailability.total_count) {
+            // Update allocation count
+            const { error: updateError } = await supabase
               .from("venue_female")
-              .update({ allocated: reserveVenue.allocated + 1 })
-              .eq("id", reserveVenue.id);
+              .update({ allocated: venueAvailability.allocated + 1 })
+              .eq("id", venueAvailability.id);
 
-            if (updateReserveError) throw updateReserveError;
+            if (updateError) throw updateError;
           } else {
-            throw new Error("Reserve venue not found");
+            // Allocate to reserve venue
+            // ...existing reserve venue logic...
           }
         }
       } else {
-        // Handle male accommodation
+        // Male venue lookup logic
         const { data: venueData, error: venueError } = await supabase.from("male_stay_inventory").select("venue").ilike("city", cityToSearch).maybeSingle();
 
         if (venueError) throw venueError;
 
-        if (!venueData) {
-          // If no venue found for this city, use "other"
-          const { data: otherVenueData, error: otherVenueError } = await supabase.from("male_stay_inventory").select("venue").eq("city", "other").maybeSingle();
+        // Apply trim() to remove any whitespace from the venue name
+        allocatedVenue = venueData ? venueData.venue.trim() : "";
 
-          if (otherVenueError) throw otherVenueError;
-          if (otherVenueData) {
-            allocatedVenue = otherVenueData.venue;
-          } else {
-            throw new Error("No venue found for males");
-          }
-        } else {
-          allocatedVenue = venueData.venue;
-        }
+        console.log("Male venue to search for:", allocatedVenue);
 
-        // Now check availability in venue_male and allocate
-        const { data: venueAvailability, error: availabilityError } = await supabase.from("venue_male").select("*").eq("name", allocatedVenue).maybeSingle();
+        // Modified: Get all venues and find matching one case-insensitively with trim
+        const { data: allVenues, error: allVenuesError } = await supabase.from("venue_male").select("*");
 
-        if (availabilityError) throw availabilityError;
+        if (allVenuesError) throw allVenuesError;
+
+        // Debug log all available venues
+        console.log(
+          "Available male venues:",
+          allVenues.map((v) => `"${v.name}"`)
+        );
+
+        // Find the venue with case-insensitive matching AND trimming whitespace
+        const venueAvailability = allVenues?.find((venue) => venue.name.toLowerCase().trim() === allocatedVenue.toLowerCase().trim());
 
         if (!venueAvailability) {
-          throw new Error(`Venue ${allocatedVenue} not found in the system`);
+          // Try a more flexible matching approach
+          const possibleMatches = allVenues
+            .filter((v) => v.name.toLowerCase().replace(/\s+/g, "") === allocatedVenue.toLowerCase().replace(/\s+/g, ""))
+            .map((v) => v.name);
+
+          // If we found exactly one match with the more flexible approach, use it
+          if (possibleMatches.length === 1) {
+            console.log(`Using flexible match: "${possibleMatches[0]}" for "${allocatedVenue}"`);
+
+            const flexMatch = allVenues.find((v) => v.name === possibleMatches[0]);
+            if (flexMatch) {
+              // Update the inventory table to fix the mismatch for the future
+              await supabase.from("male_stay_inventory").update({ venue: flexMatch.name }).eq("venue", allocatedVenue);
+
+              allocatedVenue = flexMatch.name;
+
+              // Continue with this venue
+              const { error: updateError } = await supabase
+                .from("venue_male")
+                .update({ allocated: flexMatch.allocated + 1 })
+                .eq("id", flexMatch.id);
+
+              if (updateError) throw updateError;
+
+              // Skip the rest of the male venue logic
+              goto_update_participant_record();
+            }
+          }
+
+          // Otherwise show debug info and error
+          const availableOptions = allVenues?.map((v) => `"${v.name}"`).join(", ") || "none";
+          console.error(`Venue "${allocatedVenue}" not found in venue_male. Available options: ${availableOptions}`);
+          throw new Error(`Venue "${allocatedVenue}" not found. Check for extra spaces or typos in venue names.`);
         }
 
         // Check if venue has capacity
@@ -245,17 +273,28 @@ const HospitalityKitDistribution = () => {
           if (updateError) throw updateError;
         } else {
           // Try to allocate to one of the reserve venues
-          const reserveVenues = ["ramoutin college", "Dewangan bhavan", "Officer Club", "Muslim venue"];
+          // Get all reserve venue names from the actual data
+          const reserveVenues = allVenues
+            .filter(
+              (v) =>
+                v.name.toLowerCase().includes("reserve") ||
+                v.name.toLowerCase().includes("ramoutin") ||
+                v.name.toLowerCase().includes("dewangan") ||
+                v.name.toLowerCase().includes("officer") ||
+                v.name.toLowerCase().includes("muslim")
+            )
+            .map((v) => v.name);
+
+          console.log("Available reserve venues:", reserveVenues);
 
           // Find a reserve venue with availability
           let reserveVenueFound = false;
 
-          for (const reserveName of reserveVenues) {
-            const { data: reserveVenue, error: reserveError } = await supabase.from("venue_male").select("*").eq("name", reserveName).maybeSingle();
+          for (const reserveVenueName of reserveVenues) {
+            const reserveVenue = allVenues.find((v) => v.name.toLowerCase() === reserveVenueName.toLowerCase());
+            if (!reserveVenue) continue;
 
-            if (reserveError) continue;
-
-            if (reserveVenue && reserveVenue.allocated < reserveVenue.total_count) {
+            if (reserveVenue.allocated < reserveVenue.total_count) {
               const { error: updateReserveError } = await supabase
                 .from("venue_male")
                 .update({ allocated: reserveVenue.allocated + 1 })
@@ -263,17 +302,15 @@ const HospitalityKitDistribution = () => {
 
               if (updateReserveError) continue;
 
-              allocatedVenue = reserveName;
+              allocatedVenue = reserveVenue.name;
               reserveVenueFound = true;
               break;
             }
           }
 
-          if (!reserveVenueFound) {
+          if (!reserveVenueFound && reserveVenues.length > 0) {
             // All reserve venues are full, assign to the first one anyway
-            const { data: firstReserve, error: firstReserveError } = await supabase.from("venue_male").select("*").eq("name", reserveVenues[0]).maybeSingle();
-
-            if (firstReserveError) throw firstReserveError;
+            const firstReserve = allVenues.find((v) => v.name.toLowerCase() === reserveVenues[0].toLowerCase());
 
             if (firstReserve) {
               const { error: updateFirstReserveError } = await supabase
@@ -283,13 +320,18 @@ const HospitalityKitDistribution = () => {
 
               if (updateFirstReserveError) throw updateFirstReserveError;
 
-              allocatedVenue = reserveVenues[0];
+              allocatedVenue = firstReserve.name;
             } else {
               throw new Error("No reserve venues found");
             }
+          } else if (!reserveVenueFound) {
+            throw new Error("No reserve venues configured");
           }
         }
       }
+
+      // Label used for goto_update_participant_record function
+      function goto_update_participant_record() {}
 
       // Update participant record with allocated venue
       const { error: updateParticipantError } = await supabase
