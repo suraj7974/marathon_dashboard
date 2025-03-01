@@ -201,15 +201,8 @@ const BibDistribution = () => {
       }
     } else {
       // For non-Narayanpur participants:
-      // 1. T-shirt must be collected
-      if (!participant.received_tshirt) {
-        return {
-          allowed: false,
-          message: "T-shirt must be collected before BIB assignment",
-        };
-      }
-
-      // 2. Check if payment is completed (either online or offline)
+      // Only check if payment is completed (either online or offline)
+      // Removed the t-shirt collection requirement
       const paymentComplete = participant.payment_status === "DONE" || participant.payment_offline === true;
 
       if (!paymentComplete) {
