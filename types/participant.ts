@@ -23,4 +23,5 @@ export interface Participant {
   state: string;
   accommodation_allocated?: boolean;
   accommodation_venue?: string;
+  date_of_birth: Date;
 }

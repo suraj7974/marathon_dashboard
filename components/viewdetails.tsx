@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, CreditCard, Trophy, MapPin, FileCheck, Shield, AlertTriangle, Users, Building, Phone, Tag, Check, X } from "lucide-react";
+import { Search, User, CreditCard, Trophy, MapPin, FileCheck, Shield, AlertTriangle, Users, Building, Phone, Tag, Check, X, Calendar } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
@@ -71,6 +71,27 @@ const ViewDetails = () => {
     }
   };
 
+  // Helper function to format date
+  const formatDate = (dateString: string | Date | null | undefined) => {
+    if (!dateString) return "Not specified";
+
+    try {
+      const date = new Date(dateString);
+      // Check if valid date
+      if (isNaN(date.getTime())) return "Invalid date";
+
+      // Format as DD/MM/YYYY
+      return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch (error) {
+      console.error("Date formatting error:", error);
+      return "Error formatting date";
+    }
+  };
+
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
@@ -130,6 +151,7 @@ const ViewDetails = () => {
                   </div>
 
                   <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_category || "10KM"} iconColor="text-indigo-500" />
+                  <ParticipantDetailItem icon={Calendar} label="Date of Birth" value={formatDate(participant.date_of_birth)} iconColor="text-green-500" />
 
                   <ParticipantDetailItem icon={Users} label="Gender" value={participant.gender} iconColor="text-purple-500" />
 
