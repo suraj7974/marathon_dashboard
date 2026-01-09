@@ -10,7 +10,7 @@ import { ParticipantDetailItem } from "./participant-detail-item";
 import { data } from "react-router-dom";
 
 const HospitalityKitDistribution = () => {
-  const [participantNumber, setParticipantNumber] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -19,16 +19,41 @@ const HospitalityKitDistribution = () => {
   const [debugInfo, setDebugInfo] = useState<string>("");
   const [accommodationInfo, setAccommodationInfo] = useState<string>("");
 
-  const fetchParticipantDetails = async (number: string) => {
+  const fetchParticipantDetails = async (input: string) => {
     setLoading(true);
     setError("");
     setDebugInfo("");
     setAccommodationInfo("");
 
     try {
-      const { data, error: searchError } = await supabase.from("registrations").select("*").eq("identification_number", number.toUpperCase()).maybeSingle();
+      let data = null;
 
-      if (searchError) throw searchError;
+      // First try to search by BIB number (primary) if input is numeric
+      if (/^\d+$/.test(input)) {
+        const bibNumber = parseInt(input, 10);
+        const { data: bibData, error: bibError } = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("bib_num", bibNumber)
+          .maybeSingle();
+
+        if (bibError) throw bibError;
+        data = bibData;
+      }
+
+      // If not found by BIB or input is not numeric, try identification_number (secondary)
+      if (!data) {
+        const { data: idData, error: searchError } = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("identification_number", input.toUpperCase())
+          .maybeSingle();
+
+        if (searchError) throw searchError;
+        data = idData;
+      }
 
       if (data) {
         // Check if participant is from Narayanpur (they are not eligible)
@@ -40,7 +65,7 @@ const HospitalityKitDistribution = () => {
 
         setParticipant(data);
       } else {
-        setError(`No participant found with ID: ${number}`);
+        setError(`No participant found with BIB or ID: ${input}`);
         setParticipant(null);
       }
     } catch (err) {
@@ -53,15 +78,15 @@ const HospitalityKitDistribution = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setParticipantNumber(e.target.value.toUpperCase());
+    setSearchInput(e.target.value.toUpperCase());
   };
 
   const handleSearch = () => {
-    if (!participantNumber.trim()) {
-      setError("Please enter an identification number");
+    if (!searchInput.trim()) {
+      setError("Please enter a BIB number or ID");
       return;
     }
-    fetchParticipantDetails(participantNumber.trim());
+    fetchParticipantDetails(searchInput.trim());
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -91,7 +116,7 @@ const HospitalityKitDistribution = () => {
       }
 
       // Update the kits status to true (distributed)
-      const { error } = await supabase.from("registrations").update({ kits: true }).eq("identification_number", participant.identification_number).select();
+      const { error } = await supabase.schema("marathon").from("registrations_2026").update({ kits: true }).eq("bib_num", participant.bib_num).select();
 
       if (error) {
         console.error("Supabase error:", error);
@@ -336,12 +361,13 @@ const HospitalityKitDistribution = () => {
       
       // Update participant record with allocated venue
       const { error: updateParticipantError } = await supabase
-        .from('registrations')
+        .schema('marathon')
+        .from('registrations_2026')
         .update({ 
           accommodation_venue: allocatedVenue,
           accommodation_allocated: true 
         })
-        .eq('identification_number', participant.identification_number);
+        .eq('bib_num', participant.bib_num);
         
       if (updateParticipantError) throw updateParticipantError;
       
@@ -396,8 +422,8 @@ const HospitalityKitDistribution = () => {
             <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
               <Input
                 type="text"
-                placeholder="Enter unique ID"
-                value={participantNumber}
+                placeholder="Enter BIB Number or ID"
+                value={searchInput}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 disabled={loading}

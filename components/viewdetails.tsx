@@ -19,19 +19,15 @@ const ViewDetails = () => {
     setError("");
 
     try {
-      // First try to search by identification_number (like in BibDistribution component)
-      const { data: idData } = await supabase.from("registrations").select("*").eq("identification_number", input.toUpperCase()).maybeSingle();
-
-      if (idData) {
-        setParticipant(idData);
-        setLoading(false);
-        return;
-      }
-
-      // If no results by ID, try to search by bib_num if input is numeric
+      // First try to search by bib_num if input is numeric (primary search)
       if (/^\d+$/.test(input)) {
         const bibNumber = parseInt(input, 10);
-        const { data: bibData, error: bibError } = await supabase.from("registrations").select("*").eq("bib_num", bibNumber).maybeSingle();
+        const { data: bibData, error: bibError } = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("bib_num", bibNumber)
+          .maybeSingle();
 
         if (bibError) throw bibError;
 
@@ -41,8 +37,22 @@ const ViewDetails = () => {
         }
       }
 
+      // If no results by BIB or input is not numeric, try to search by identification_number (secondary)
+      const { data: idData } = await supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .select("*")
+        .eq("identification_number", input.toUpperCase())
+        .maybeSingle();
+
+      if (idData) {
+        setParticipant(idData);
+        setLoading(false);
+        return;
+      }
+
       // If no participant found through either method
-      setError(`No participant found with ID or Bib Number: ${input}`);
+      setError(`No participant found with BIB or ID: ${input}`);
       setParticipant(null);
     } catch (err) {
       console.error("Fetch error:", err);
@@ -59,7 +69,7 @@ const ViewDetails = () => {
 
   const handleSearch = () => {
     if (!searchInput.trim()) {
-      setError("Please enter an ID or Bib Number");
+      setError("Please enter a BIB Number or ID");
       return;
     }
     fetchParticipantDetails(searchInput.trim());
@@ -103,7 +113,7 @@ const ViewDetails = () => {
             <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
               <Input
                 type="text"
-                placeholder="Enter ID or Bib Number"
+                placeholder="Enter BIB Number or ID"
                 value={searchInput}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}

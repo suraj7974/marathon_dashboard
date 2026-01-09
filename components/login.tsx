@@ -12,11 +12,18 @@ const Login = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const handleLogin = (role: "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit") => {
+  const handleLogin = (role: "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit" | "verify" | "influencers") => {
     if (authenticate(role, password)) {
       setStoredAuth(role);
       setSessionStartTime();
-      navigate(role === "payment" ? "/" : `/${role}`);
+      // Navigate based on role
+      if (role === "verify") {
+        navigate("/verify");
+      } else if (role === "payment") {
+        navigate("/");
+      } else {
+        navigate(`/${role}`);
+      }
     } else {
       setError("Invalid password");
     }
@@ -50,20 +57,17 @@ const Login = () => {
           )}
 
           <div className="grid grid-cols-2 gap-4">
-            <Button onClick={() => handleLogin("govt")} className="w-full">
-              Govt ID Section
-            </Button>
-            <Button onClick={() => handleLogin("payment")} className="w-full">
-              Payment Section
+            <Button onClick={() => handleLogin("verify")} className="w-full">
+              Verify Section
             </Button>
             <Button onClick={() => handleLogin("shirt")} className="w-full">
               T-Shirt Section
             </Button>
-            <Button onClick={() => handleLogin("bib")} className="w-full">
-              BIB Section
-            </Button>
             <Button onClick={() => handleLogin("kit")} className="w-full">
-              kits
+              Kits Section
+            </Button>
+            <Button onClick={() => handleLogin("influencers")} className="w-full">
+              Influencers
             </Button>
           </div>
 

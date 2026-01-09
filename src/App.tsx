@@ -1,15 +1,14 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { ProtectedRoute } from "../components/protected-route";
 import Login from "../components/login";
-import PaymentVerify from "../components/step1";
+import PaymentAndVerification from "../components/verify";
 import TShirtDistribution from "../components/step2";
-import BibDistribution from "../components/step3";
 import HospitalityKitDistribution from "../components/step4";
 import ViewDetails from "../components/viewdetails";
-import GovernmentIdVerification from "../components/step0";
 import MobileSearch from "../components/mobilesearch";
 import TshirtSales from "../components/tshirt";
 import AccommodationManagement from "../components/viewvenue";
+import Influencers from "../components/influencers";
 import "./App.css";
 
 function App() {
@@ -22,10 +21,10 @@ function App() {
         <Route path="/view-venue" element={<AccommodationManagement/>}/>
 
         <Route
-          path="/"
+          path="/verify"
           element={
-            <ProtectedRoute requiredRole="payment">
-              <PaymentVerify />
+            <ProtectedRoute requiredRole="verify">
+              <PaymentAndVerification />
             </ProtectedRoute>
           }
         />
@@ -40,28 +39,19 @@ function App() {
         />
 
         <Route
-          path="/bib"
-          element={
-            <ProtectedRoute requiredRole="bib">
-              <BibDistribution />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/govt"
-          element={
-            <ProtectedRoute requiredRole="govt">
-              <GovernmentIdVerification />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
           path="/kit"
           element={
             <ProtectedRoute requiredRole="kit">
               <HospitalityKitDistribution />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/influencers"
+          element={
+            <ProtectedRoute requiredRole="influencers">
+              <Influencers />
             </ProtectedRoute>
           }
         />

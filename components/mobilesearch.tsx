@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, Phone, CreditCard, Info } from "lucide-react";
+import { Search, User, Phone, CreditCard, Info, Tag } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 
 type IdNumberWithStatus = {
   idNumber: string;
+  bibNumber: string | null;
   paymentStatus: string;
 };
 
@@ -50,7 +51,8 @@ const MobileSearch = () => {
     try {
       // Query the database for all entries with the given mobile number
       const { data, error: searchError } = await supabase
-        .from("registrations")
+        .schema("marathon")
+        .from("registrations_2026")
         .select("*")
         .eq("mobile", mobileNumber.trim());
 
@@ -66,17 +68,17 @@ const MobileSearch = () => {
       // Process the results to group by unique names
       const participants = data as Participant[];
       const nameGroups = new Map<string, { 
-        idNumbersWithStatus: Map<string, string>, 
+        idNumbersWithStatus: Map<string, { paymentStatus: string; bibNumber: string | null }>, 
         entries: Participant[] 
       }>();
 
-      // Group participants by full name and collect unique identification numbers with status
+      // Group participants by full name and collect unique identification numbers with status and BIB
       participants.forEach(participant => {
         const fullName = `${participant.first_name} ${participant.last_name}`;
         
         if (!nameGroups.has(fullName)) {
           nameGroups.set(fullName, { 
-            idNumbersWithStatus: new Map<string, string>(), 
+            idNumbersWithStatus: new Map<string, { paymentStatus: string; bibNumber: string | null }>(), 
             entries: [] 
           });
         }
@@ -84,16 +86,19 @@ const MobileSearch = () => {
         const group = nameGroups.get(fullName)!;
         group.idNumbersWithStatus.set(
           participant.identification_number, 
-          participant.payment_status
+          {
+            paymentStatus: participant.payment_status,
+            bibNumber: participant.bib_num ? participant.bib_num.toString() : null
+          }
         );
         group.entries.push(participant);
       });
 
       // Convert the Map to the desired result format and apply filtering logic
       const results: SearchResult[] = Array.from(nameGroups.entries()).map(([fullName, data]) => {
-        // Get all ID numbers with their payment status
+        // Get all ID numbers with their payment status and BIB
         const allIdNumbersWithStatus = Array.from(data.idNumbersWithStatus.entries()).map(
-          ([idNumber, status]) => ({ idNumber, paymentStatus: status })
+          ([idNumber, { paymentStatus, bibNumber }]) => ({ idNumber, paymentStatus, bibNumber })
         );
 
         // Filter for non-pending IDs
@@ -195,21 +200,27 @@ const MobileSearch = () => {
                         
                         <div>
                           <h3 className="text-sm font-medium text-gray-500 mb-2">
-                            Identification Numbers ({result.idNumbersWithStatus.length})
+                            Identification Numbers & BIB ({result.idNumbersWithStatus.length})
                           </h3>
                           <div className="space-y-2">
                             {result.idNumbersWithStatus.map((item, idxId) => (
-                              <div key={idxId} className="flex items-center gap-2">
+                              <div key={idxId} className="flex items-center gap-2 flex-wrap">
                                 <CreditCard className="w-4 h-4 text-gray-400" />
                                 <span className="text-sm font-mono">{item.idNumber}</span>
+                                {item.bibNumber && (
+                                  <span className="text-sm font-mono bg-amber-100 text-amber-800 px-2 py-0.5 rounded">
+                                    <Tag className="w-3 h-3 inline mr-1" />
+                                    BIB: {item.bibNumber}
+                                  </span>
+                                )}
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${
-                                  item.paymentStatus === "DONE" 
+                                  item.paymentStatus === "DONE" || item.paymentStatus === "done" || item.paymentStatus === "online" || item.paymentStatus === "cash"
                                     ? "bg-green-100 text-green-800" 
-                                    : item.paymentStatus === "PENDING" 
+                                    : item.paymentStatus === "PENDING" || item.paymentStatus === "pending"
                                       ? "bg-amber-100 text-amber-800"
                                       : "bg-blue-100 text-blue-800"
                                 }`}>
-                                  {item.paymentStatus}
+                                  {item.paymentStatus?.toUpperCase() || "N/A"}
                                 </span>
                               </div>
                             ))}

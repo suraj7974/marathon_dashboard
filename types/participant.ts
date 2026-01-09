@@ -24,4 +24,5 @@ export interface Participant {
   accommodation_allocated?: boolean;
   accommodation_venue?: string;
   date_of_birth: Date;
+  wants_tshirt: boolean;
 }

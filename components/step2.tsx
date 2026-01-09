@@ -9,21 +9,44 @@ import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
 
 const TShirtDistribution = () => {
-  const [participantNumber, setParticipantNumber] = useState("");
+  const [searchInput, setSearchInput] = useState("");
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [updatingTshirt, setUpdatingTshirt] = useState(false);
 
-  const fetchParticipantDetails = async (number: string) => {
+  const fetchParticipantDetails = async (input: string) => {
     setLoading(true);
     setError("");
 
     try {
+      // First try to search by BIB number (primary) if input is numeric
+      if (/^\d+$/.test(input)) {
+        const bibNumber = parseInt(input, 10);
+        const { data: bibData, error: bibError } = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*, received_tshirt:received_tshirt::boolean")
+          .eq("bib_num", bibNumber)
+          .maybeSingle();
+
+        if (bibError) throw bibError;
+
+        if (bibData) {
+          setParticipant({
+            ...bibData,
+            received_tshirt: Boolean(bibData.received_tshirt),
+          });
+          return;
+        }
+      }
+
+      // If not found by BIB or input is not numeric, try identification_number (secondary)
       const { data, error: searchError } = await supabase
-        .from("registrations")
+        .schema("marathon")
+        .from("registrations_2026")
         .select("*, received_tshirt:received_tshirt::boolean")
-        .eq("identification_number", number.toUpperCase())
+        .eq("identification_number", input.toUpperCase())
         .maybeSingle();
 
       if (searchError) throw searchError;
@@ -34,7 +57,7 @@ const TShirtDistribution = () => {
           received_tshirt: Boolean(data.received_tshirt),
         });
       } else {
-        setError(`No participant found with ID: ${number}`);
+        setError(`No participant found with BIB or ID: ${input}`);
         setParticipant(null);
       }
     } catch (err) {
@@ -47,15 +70,15 @@ const TShirtDistribution = () => {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setParticipantNumber(e.target.value.toUpperCase());
+    setSearchInput(e.target.value.toUpperCase());
   };
 
   const handleSearch = () => {
-    if (!participantNumber.trim()) {
-      setError("Please enter an identification number");
+    if (!searchInput.trim()) {
+      setError("Please enter a BIB number or ID");
       return;
     }
-    fetchParticipantDetails(participantNumber.trim());
+    fetchParticipantDetails(searchInput.trim());
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -73,9 +96,10 @@ const TShirtDistribution = () => {
     try {
       // 1. First update registration status
       const { data, error } = await supabase
-        .from("registrations")
+        .schema("marathon")
+        .from("registrations_2026")
         .update({ received_tshirt: received })
-        .eq("identification_number", participant.identification_number)
+        .eq("bib_num", participant.bib_num)
         .select()
         .single();
 
@@ -161,8 +185,8 @@ const TShirtDistribution = () => {
             <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
               <Input
                 type="text"
-                placeholder="Enter unique ID"
-                value={participantNumber}
+                placeholder="Enter BIB Number or ID"
+                value={searchInput}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
                 disabled={loading}
