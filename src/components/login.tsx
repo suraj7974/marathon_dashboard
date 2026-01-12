@@ -19,7 +19,17 @@ import {
   ShoppingCart,
 } from "lucide-react";
 
-type AuthRole = "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit" | "verify" | "influencers" | "inventory" | "bulksales";
+type AuthRole =
+  | "payment"
+  | "shirt"
+  | "bib"
+  | "govt"
+  | "tshirt"
+  | "kit"
+  | "verify"
+  | "influencers"
+  | "inventory"
+  | "bulksales";
 
 const Login = () => {
   const [password, setPassword] = useState("");
