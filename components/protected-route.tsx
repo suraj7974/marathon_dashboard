@@ -5,7 +5,7 @@ import { SessionManager, checkSessionExpired, setSessionStartTime } from "../lib
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole: "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit" | "verify" | "influencers";
+  requiredRole: "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit" | "verify" | "influencers" | "inventory" | "bulksales";
 }
 
 export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {

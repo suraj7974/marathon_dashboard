@@ -9,6 +9,8 @@ import MobileSearch from "../components/mobilesearch";
 import TshirtSales from "../components/tshirt";
 import AccommodationManagement from "../components/viewvenue";
 import Influencers from "../components/influencers";
+import TshirtInventory from "../components/tshirt-inventory";
+import TshirtBulkSales from "../components/tshirt-bulk-sales";
 import "./App.css";
 
 function App() {
@@ -52,6 +54,24 @@ function App() {
           element={
             <ProtectedRoute requiredRole="influencers">
               <Influencers />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/inventory"
+          element={
+            <ProtectedRoute requiredRole="inventory">
+              <TshirtInventory />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/bulk-sales"
+          element={
+            <ProtectedRoute requiredRole="bulksales">
+              <TshirtBulkSales />
             </ProtectedRoute>
           }
         />
