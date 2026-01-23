@@ -29,7 +29,7 @@ const BASTAR_REGION_CITIES = [
   "jagdalpur",
   "kanker",
   "dantewada",
-  "rajnandgaon",
+  "kondagaon",
   "bijapur",
   "sukma",
 ];
