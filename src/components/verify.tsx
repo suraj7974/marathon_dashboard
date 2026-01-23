@@ -75,7 +75,7 @@ const PaymentAndVerification = () => {
     try {
       // Search by BIB number (primary)
       const bibNum = parseInt(bib, 10);
-      
+
       if (isNaN(bibNum)) {
         setError("Please enter a valid BIB number");
         setParticipant(null);
@@ -138,7 +138,7 @@ const PaymentAndVerification = () => {
               ...prev,
               govt_id_verified: true,
             }
-          : null
+          : null,
       );
 
       setSuccessMessage("Government ID successfully verified");
@@ -149,7 +149,7 @@ const PaymentAndVerification = () => {
     }
   };
 
-  const handlePaymentAction = async (method: "online" | "cash") => {
+  const handlePaymentAction = async (method: "ONLINE" | "CASH") => {
     if (!participant) return;
 
     setProcessingPayment(true);
@@ -161,7 +161,7 @@ const PaymentAndVerification = () => {
         .schema("marathon")
         .from("registrations_2026")
         .update({
-          payment_status: method, // "online" or "cash"
+          payment_status: method,
         })
         .eq("bib_num", participant.bib_num);
 
@@ -173,10 +173,10 @@ const PaymentAndVerification = () => {
               ...prev,
               payment_status: method,
             }
-          : null
+          : null,
       );
 
-      setSuccessMessage(`Payment marked as ${method.toUpperCase()}`);
+      setSuccessMessage(`Payment marked as ${method}`);
       setShowPaymentMethods(false);
     } catch (err) {
       setError("Failed to update payment status");
@@ -187,6 +187,13 @@ const PaymentAndVerification = () => {
 
   const getPaymentAmount = () => {
     if (!participant) return 0;
+    if (
+      participant.city.toLowerCase() === "narayanpur" &&
+      needsPayment() &&
+      participant.wants_tshirt
+    ) {
+      return 200;
+    }
     return participant.wants_tshirt ? 499 : 299;
   };
 
@@ -197,14 +204,16 @@ const PaymentAndVerification = () => {
 
   const isPaymentComplete = () => {
     if (!participant) return false;
-    return participant.payment_status === "done" || 
-           participant.payment_status === "online" || 
-           participant.payment_status === "cash";
+    return (
+      participant.payment_status === "DONE" ||
+      participant.payment_status === "ONLINE" ||
+      participant.payment_status === "CASH"
+    );
   };
 
   const needsPayment = () => {
     if (!participant) return false;
-    return participant.payment_status === "offline";
+    return participant.payment_status === "OFFLINE";
   };
 
   return (
@@ -251,7 +260,10 @@ const PaymentAndVerification = () => {
 
             {/* Error Alert */}
             {error && (
-              <Alert variant="destructive" className="mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+              <Alert
+                variant="destructive"
+                className="mx-4 sm:mx-8 md:mx-16 lg:mx-32"
+              >
                 <AlertDescription className="flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
                   {error}
@@ -283,18 +295,26 @@ const PaymentAndVerification = () => {
                       </h3>
                     </div>
                     <p className="text-amber-700 mb-4">
-                      This participant is from <strong>{participant.city}</strong> and is not from the Narayanpur/Bastar region.
-                      Please direct them to the appropriate counter for verification and payment.
+                      This participant is from{" "}
+                      <strong>{participant.city}</strong> and is not from the
+                      Narayanpur/Bastar region. Please direct them to the
+                      appropriate counter for verification and payment.
                     </p>
                     <div className="bg-white rounded p-4 border border-amber-200">
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <span className="text-sm text-gray-500">Name</span>
-                          <p className="font-medium">{participant.first_name} {participant.last_name}</p>
+                          <p className="font-medium">
+                            {participant.first_name} {participant.last_name}
+                          </p>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-500">BIB Number</span>
-                          <p className="font-medium">#{participant.bib_num?.toString()}</p>
+                          <span className="text-sm text-gray-500">
+                            BIB Number
+                          </span>
+                          <p className="font-medium">
+                            #{participant.bib_num?.toString()}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -315,7 +335,9 @@ const PaymentAndVerification = () => {
                         <div className="flex items-start gap-3">
                           <Tag className="w-6 h-6 text-amber-500 mt-1 shrink-0" />
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">BIB Number</div>
+                            <div className="text-sm text-gray-500">
+                              BIB Number
+                            </div>
                             <div className="mt-1 text-2xl font-bold text-amber-700">
                               #{participant.bib_num?.toString()}
                             </div>
@@ -339,7 +361,9 @@ const PaymentAndVerification = () => {
                         <div className="flex items-start gap-3">
                           <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">Payment Status</div>
+                            <div className="text-sm text-gray-500">
+                              Payment Status
+                            </div>
                             <div className="mt-1">
                               <span
                                 className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
@@ -348,7 +372,8 @@ const PaymentAndVerification = () => {
                                     : "bg-red-100 text-red-800"
                                 }`}
                               >
-                                {participant.payment_status?.toUpperCase() || "PENDING"}
+                                {participant.payment_status?.toUpperCase() ||
+                                  "PENDING"}
                               </span>
                             </div>
                           </div>
@@ -357,16 +382,22 @@ const PaymentAndVerification = () => {
                         <div className="flex items-start gap-3">
                           <FileCheck className="w-6 h-6 text-violet-500 mt-1 shrink-0" />
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">Government ID</div>
+                            <div className="text-sm text-gray-500">
+                              Government ID
+                            </div>
                             {participant.govt_id ? (
                               <div className="mt-1">
-                                <div className="font-medium">{participant.govt_id}</div>
+                                <div className="font-medium">
+                                  {participant.govt_id}
+                                </div>
                                 <div className="text-sm text-blue-600">
                                   {getIdType(participant.govt_id)}
                                 </div>
                               </div>
                             ) : (
-                              <div className="mt-1 text-gray-400">No ID provided</div>
+                              <div className="mt-1 text-gray-400">
+                                No ID provided
+                              </div>
                             )}
                           </div>
                         </div>
@@ -389,7 +420,9 @@ const PaymentAndVerification = () => {
                             </svg>
                           </div>
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">Wants T-shirt</div>
+                            <div className="text-sm text-gray-500">
+                              Wants T-shirt
+                            </div>
                             <div className="mt-1">
                               <span
                                 className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
@@ -408,7 +441,9 @@ const PaymentAndVerification = () => {
 
                     {/* Government ID Verification Section */}
                     <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                      <h3 className="font-medium text-lg mb-4">Government ID Verification</h3>
+                      <h3 className="font-medium text-lg mb-4">
+                        Government ID Verification
+                      </h3>
 
                       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                         <div
@@ -418,7 +453,9 @@ const PaymentAndVerification = () => {
                               : "bg-yellow-100 text-yellow-800"
                           }`}
                         >
-                          {participant.govt_id_verified ? "ID Verified" : "ID Not Verified"}
+                          {participant.govt_id_verified
+                            ? "ID Verified"
+                            : "ID Not Verified"}
                         </div>
 
                         {!participant.govt_id_verified ? (
@@ -446,14 +483,18 @@ const PaymentAndVerification = () => {
 
                       {!participant.govt_id && (
                         <p className="text-sm text-gray-500 mt-3">
-                          Note: No government ID was provided during registration. You can still verify if physical ID is shown.
+                          Note: No government ID was provided during
+                          registration. You can still verify if physical ID is
+                          shown.
                         </p>
                       )}
                     </div>
 
                     {/* Payment Section */}
                     <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                      <h3 className="font-medium text-lg mb-4">Payment Verification</h3>
+                      <h3 className="font-medium text-lg mb-4">
+                        Payment Verification
+                      </h3>
 
                       {isPaymentComplete() ? (
                         <div className="flex items-center gap-3">
@@ -463,7 +504,8 @@ const PaymentAndVerification = () => {
                           <div className="text-green-600 flex items-center gap-2">
                             <Check className="w-5 h-5" />
                             <span>
-                              Paid via {participant.payment_status?.toUpperCase()}
+                              Paid via{" "}
+                              {participant.payment_status?.toUpperCase()}
                             </span>
                           </div>
                         </div>
@@ -475,30 +517,40 @@ const PaymentAndVerification = () => {
                             </div>
                             <span className="text-gray-600">
                               Amount to collect:{" "}
-                              <strong className="text-lg">Rs. {getPaymentAmount()}</strong>
-                              {participant.wants_tshirt ? " (Registration + T-shirt)" : " (Registration only)"}
+                              <strong className="text-lg">
+                                Rs. {getPaymentAmount()}
+                              </strong>
+                              {participant.wants_tshirt
+                                ? " (Registration + T-shirt)"
+                                : " (Registration only)"}
                             </span>
                           </div>
 
                           {showPaymentMethods ? (
                             <div className="space-y-3">
-                              <p className="text-sm text-gray-600">Select payment method:</p>
+                              <p className="text-sm text-gray-600">
+                                Select payment method:
+                              </p>
                               <div className="flex flex-col sm:flex-row gap-3">
                                 <Button
-                                  onClick={() => handlePaymentAction("online")}
+                                  onClick={() => handlePaymentAction("ONLINE")}
                                   disabled={processingPayment}
                                   className="bg-blue-600 hover:bg-blue-700"
                                 >
                                   <QrCode className="w-4 h-4 mr-2" />
-                                  {processingPayment ? "Processing..." : "Online Payment"}
+                                  {processingPayment
+                                    ? "Processing..."
+                                    : "Online Payment"}
                                 </Button>
                                 <Button
-                                  onClick={() => handlePaymentAction("cash")}
+                                  onClick={() => handlePaymentAction("CASH")}
                                   disabled={processingPayment}
                                   className="bg-green-600 hover:bg-green-700"
                                 >
                                   <Coins className="w-4 h-4 mr-2" />
-                                  {processingPayment ? "Processing..." : "Cash Payment"}
+                                  {processingPayment
+                                    ? "Processing..."
+                                    : "Cash Payment"}
                                 </Button>
                                 <Button
                                   onClick={() => setShowPaymentMethods(false)}
@@ -521,10 +573,17 @@ const PaymentAndVerification = () => {
                         </div>
                       ) : (
                         <div className="text-gray-600">
-                          <p>Current status: <strong>{participant.payment_status?.toUpperCase() || "PENDING"}</strong></p>
+                          <p>
+                            Current status:{" "}
+                            <strong>
+                              {participant.payment_status?.toUpperCase() ||
+                                "PENDING"}
+                            </strong>
+                          </p>
                           <p className="text-sm mt-2">
-                            This participant has payment status "{participant.payment_status}". 
-                            No payment action required at this counter.
+                            This participant has payment status "
+                            {participant.payment_status}". No payment action
+                            required at this counter.
                           </p>
                         </div>
                       )}
