@@ -293,7 +293,7 @@ const PaymentAndVerification = () => {
         <Card className="w-full mx-auto shadow-md">
           <CardHeader className="border-b">
             <CardTitle className="text-xl font-semibold text-center">
-              Payment and Verification
+              Payment and Verification (NPR & Bastar)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6 pt-6">

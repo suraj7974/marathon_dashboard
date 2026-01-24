@@ -6,12 +6,11 @@ import {
 } from "react-router-dom";
 import { ProtectedRoute } from "@/components/protected-route";
 import Login from "@/components/login";
-import PaymentAndVerification from "@/components/verify";
-import TShirtDistribution from "@/components/step2";
+import PaymentAndVerification from "@/components/nprBastarCategory";
+import TShirtDistribution from "@/components/openCategory";
 import HospitalityKitDistribution from "@/components/step4";
 import ViewDetails from "@/components/viewdetails";
 import MobileSearch from "@/components/mobilesearch";
-import TshirtSales from "@/components/tshirt";
 import AccommodationManagement from "@/components/viewvenue";
 import Influencers from "@/components/influencers";
 import TshirtInventory from "@/components/tshirt-inventory";
@@ -25,7 +24,6 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/mobile" element={<MobileSearch />} />
-        <Route path="/tshirt" element={<TshirtSales />} />
         <Route path="/view-venue" element={<AccommodationManagement />} />
 
         <Route

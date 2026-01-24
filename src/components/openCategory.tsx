@@ -1,0 +1,659 @@
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Alert, AlertDescription } from "./ui/alert";
+import {
+  Search,
+  User,
+  AlertTriangle,
+  MapPin,
+  Trophy,
+  CreditCard,
+  QrCode,
+  Coins,
+  Check,
+  XCircle,
+  Tag,
+  ShoppingBag,
+} from "lucide-react";
+import { supabase } from "../lib/supabase";
+import type { Participant } from "../types/participant";
+import { ParticipantDetailItem } from "./participant-detail-item";
+
+// Bastar region cities (These belong to the OTHER counter)
+const BASTAR_REGION_CITIES = [
+  "narayanpur",
+  "bastar",
+  "jagdalpur",
+  "kanker",
+  "dantewada",
+  "kondagaon",
+  "bijapur",
+  "sukma",
+];
+
+// Extended Participant interface to include potential new columns
+interface ExtendedParticipant extends Participant {
+  received_bib?: boolean;
+}
+
+const isFromBastar = (city: string): boolean => {
+  if (!city) return false;
+  return BASTAR_REGION_CITIES.includes(city.toLowerCase().trim());
+};
+
+const OpenCategoryVerification = () => {
+  const [searchValue, setSearchValue] = useState("");
+  const [participant, setParticipant] = useState<ExtendedParticipant | null>(null);
+  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [updatingItem, setUpdatingItem] = useState<string | null>(null);
+
+  const fetchParticipantDetails = async (value: string) => {
+    setLoading(true);
+    setError("");
+    setSuccessMessage("");
+    setShowPaymentMethods(false);
+    setParticipant(null);
+    setMultipleResults([]);
+
+    try {
+      let query = supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .select("*");
+
+      const trimmedValue = value.trim();
+      let searchType = "";
+
+      // Determine search type
+      if (/^\d{10}$/.test(trimmedValue)) {
+        // Mobile number (10 digits)
+        query = query.eq("mobile", trimmedValue);
+        searchType = "Mobile Number";
+      } else if (/^\d+$/.test(trimmedValue)) {
+        // BIB Number (numeric, not 10 digits)
+        query = query.eq("bib_num", parseInt(trimmedValue, 10));
+        searchType = "BIB Number";
+      } else {
+        // Unique ID (alphanumeric)
+        query = query.eq("identification_number", trimmedValue.toUpperCase());
+        searchType = "Unique ID";
+      }
+
+      const { data, error: searchError } = await query;
+
+      if (searchError) {
+        throw searchError;
+      }
+
+      if (!data || data.length === 0) {
+        setError(`No participant found with ${searchType}: ${trimmedValue}`);
+      } else if (data.length === 1) {
+        setParticipant(data[0]);
+      } else {
+        setMultipleResults(data);
+        setSuccessMessage(`Found ${data.length} participants. Please select one.`);
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+      setError("Error fetching participant details");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSelectParticipant = (selected: ExtendedParticipant) => {
+    setParticipant(selected);
+    setMultipleResults([]);
+    setSuccessMessage("");
+  };
+
+  const handleSearch = () => {
+    if (!searchValue.trim()) {
+      setError("Please enter a value to search");
+      return;
+    }
+    fetchParticipantDetails(searchValue.trim());
+  };
+
+  const handlePaymentAction = async (method: "ONLINE" | "CASH") => {
+    if (!participant) return;
+
+    setProcessingPayment(true);
+    setSuccessMessage("");
+    setError("");
+
+    try {
+      const { error } = await supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .update({
+          payment_status: method,
+        })
+        .eq("bib_num", participant.bib_num);
+
+      if (error) throw error;
+
+      setParticipant((prev) =>
+        prev
+          ? {
+              ...prev,
+              payment_status: method,
+            }
+          : null,
+      );
+
+      setSuccessMessage(`Payment marked as ${method}`);
+      setShowPaymentMethods(false);
+    } catch (err) {
+      setError("Failed to update payment status");
+    } finally {
+      setProcessingPayment(false);
+    }
+  };
+
+  const handleUpdateItemStatus = async (item: "tshirt" | "bib") => {
+    if (!participant) return;
+
+    setUpdatingItem(item);
+    setError("");
+    setSuccessMessage("");
+
+    const column = item === "tshirt" ? "received_tshirt" : "received_bib";
+    const updateData = { [column]: true };
+
+    try {
+      const { error } = await supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .update(updateData)
+        .eq("bib_num", participant.bib_num);
+
+      if (error) throw error;
+
+      setParticipant((prev) =>
+        prev
+          ? {
+              ...prev,
+              [column]: true,
+            }
+          : null,
+      );
+
+      setSuccessMessage(`${item === "tshirt" ? "T-shirt" : "Bib"} marked as received`);
+    } catch (err) {
+      console.error(`Error updating ${item} status:`, err);
+      setError(`Failed to update ${item} status`);
+    } finally {
+      setUpdatingItem(null);
+    }
+  };
+
+  const getPaymentAmount = () => {
+    if (!participant) return 0;
+    // Standard pricing for Open Category
+    return participant.wants_tshirt ? 499 : 299;
+  };
+
+  const isEligibleForThisCounter = () => {
+    if (!participant) return false;
+    // Eligible if NOT from Bastar region
+    return !isFromBastar(participant.city);
+  };
+
+  const isPaymentComplete = () => {
+    if (!participant) return false;
+    return (
+      participant.payment_status === "DONE" ||
+      participant.payment_status === "ONLINE" ||
+      participant.payment_status === "CASH"
+    );
+  };
+
+  const needsPayment = () => {
+    if (!participant) return false;
+    return participant.payment_status === "OFFLINE";
+  };
+
+  const canDistributeItems = () => {
+    if (!participant) return false;
+    // Enabled only if payment is complete (No Government ID check needed)
+    return isPaymentComplete();
+  };
+
+  return (
+    <div className="min-h-screen">
+      <div className="container mx-auto px-4 py-8">
+        <Card className="w-full mx-auto shadow-md">
+          <CardHeader className="border-b">
+            <CardTitle className="text-xl font-semibold text-center">
+              Open Category Verification
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 pt-6">
+            {/* Search Section */}
+            <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
+              <Input
+                id="search-input"
+                type="text"
+                placeholder="Enter BIB, Mobile (10 digits) or Unique ID"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleSearch();
+                  }
+                }}
+                disabled={loading}
+                className="flex-1 h-12"
+              />
+              <Button
+                onClick={handleSearch}
+                disabled={loading}
+                className="bg-blue-600 hover:bg-blue-700 px-4 sm:px-8 h-12"
+              >
+                {loading ? (
+                  "Searching..."
+                ) : (
+                  <>
+                    <Search className="w-5 h-5 mr-2" />
+                    Search
+                  </>
+                )}
+              </Button>
+            </div>
+
+            {/* Error Alert */}
+            {error && (
+              <Alert
+                variant="destructive"
+                className="mx-4 sm:mx-8 md:mx-16 lg:mx-32"
+              >
+                <AlertDescription className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4" />
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Success Alert */}
+            {successMessage && (
+              <Alert className="mx-4 sm:mx-8 md:mx-16 lg:mx-32 bg-green-50 border-green-200">
+                <AlertDescription className="text-green-800 flex items-center gap-2">
+                  <Check className="w-4 h-4" />
+                  {successMessage}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {/* Multiple Results Selection */}
+            {multipleResults.length > 0 && !participant && (
+              <div className="space-y-4 mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Select a participant:
+                </h3>
+                <div className="grid gap-4">
+                  {multipleResults.map((result) => (
+                    <div
+                      key={result.bib_num ? result.bib_num.toString() : result.identification_number}
+                      className="bg-white p-4 rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-blue-100 rounded-full">
+                          <User className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-lg">
+                            {result.first_name} {result.last_name}
+                          </div>
+                          <div className="text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                            <span className="flex items-center gap-1">
+                              <Tag className="w-3 h-3" /> BIB: {result.bib_num?.toString() || "N/A"}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Trophy className="w-3 h-3" /> {result.race_category}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> {result.city}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleSelectParticipant(result)}
+                        className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                      >
+                        Select
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Participant Details */}
+            {participant && (
+              <div className="space-y-6">
+                {/* Check if participant is eligible for this counter */}
+                {!isEligibleForThisCounter() ? (
+                  // Is from Bastar region - show redirect message
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                    <div className="flex items-center gap-3 mb-4">
+                      <XCircle className="w-8 h-8 text-amber-600" />
+                      <h3 className="text-lg font-semibold text-amber-800">
+                        Please Go to NPR/Bastar Counter
+                      </h3>
+                    </div>
+                    <p className="text-amber-700 mb-4">
+                      This participant is from{" "}
+                      <strong>{participant.city}</strong> (NPR/Bastar Region). Please direct them to the
+                      NPR/Bastar Verification counter.
+                    </p>
+                    <div className="bg-white rounded p-4 border border-amber-200">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <span className="text-sm text-gray-500">Name</span>
+                          <p className="font-medium">
+                            {participant.first_name} {participant.last_name}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-sm text-gray-500">
+                            BIB Number
+                          </span>
+                          <p className="font-medium">
+                            #{participant.bib_num?.toString()}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  // Eligible participant - show full details and actions
+                  <>
+                    {/* Participant Info Card */}
+                    <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
+                        <ParticipantDetailItem
+                          icon={User}
+                          label="Name"
+                          value={`${participant.first_name} ${participant.last_name}`}
+                          iconColor="text-blue-500"
+                        />
+
+                        <div className="flex items-start gap-3">
+                          <Tag className="w-6 h-6 text-amber-500 mt-1 shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-sm text-gray-500">
+                              BIB Number
+                            </div>
+                            <div className="mt-1 text-2xl font-bold text-amber-700">
+                              #{participant.bib_num?.toString()}
+                            </div>
+                          </div>
+                        </div>
+
+                        <ParticipantDetailItem
+                          icon={MapPin}
+                          label="City"
+                          value={participant.city}
+                          iconColor="text-orange-500"
+                        />
+
+                        <ParticipantDetailItem
+                          icon={Trophy}
+                          label="Race Category"
+                          value={participant.race_category || "10KM"}
+                          iconColor="text-indigo-500"
+                        />
+
+                        <div className="flex items-start gap-3">
+                          <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-sm text-gray-500">
+                              Payment Status
+                            </div>
+                            <div className="mt-1">
+                              <span
+                                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                                  isPaymentComplete()
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                              >
+                                {participant.payment_status?.toUpperCase() ||
+                                  "PENDING"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Wants T-shirt info */}
+                        <div className="flex items-start gap-3">
+                          <ShoppingBag className="w-6 h-6 text-teal-500 mt-1 shrink-0" />
+                          <div className="flex-1">
+                            <div className="text-sm text-gray-500">
+                              T-Shirt Info
+                            </div>
+                            <div className="mt-1">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                                    participant.wants_tshirt
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
+                                >
+                                  {participant.wants_tshirt ? "Yes" : "No"}
+                                </span>
+                                {participant.wants_tshirt && participant.t_shirt_size && (
+                                  <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                    Size: {participant.t_shirt_size}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Main Action Grid - 2x2 Matrix */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                      {/* Left Column: Verification & Payment (Combined) */}
+                      <div className="space-y-6">
+                        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border h-full">
+                          <h3 className="font-medium text-lg mb-4">
+                            Payment
+                          </h3>
+
+                          <div className="grid grid-cols-1 gap-4">
+                            {/* Payment Item */}
+                            <div className="flex flex-col gap-4 p-4 border rounded-lg bg-gray-50">
+                              {/* Top row with Info and Status */}
+                              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="p-2 bg-amber-100 rounded-full">
+                                    <CreditCard className="w-5 h-5 text-amber-600" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium">Payment</div>
+                                    <div className="text-sm text-gray-500">
+                                      {isPaymentComplete() ? "Completed" : `Due: Rs. ${getPaymentAmount()}`}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  {isPaymentComplete() ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      <Check className="w-3 h-3 mr-1" />
+                                      {participant.payment_status?.toUpperCase()}
+                                    </span>
+                                  ) : needsPayment() && !showPaymentMethods ? (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => setShowPaymentMethods(true)}
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      Take Payment
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-gray-500 font-medium">
+                                      {participant.payment_status?.toUpperCase() || "PENDING"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* Expanded Payment Methods */}
+                              {showPaymentMethods && (
+                                <div className="pt-3 mt-1 border-t border-gray-200">
+                                  <p className="text-xs text-gray-500 mb-3">Select Method:</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handlePaymentAction("ONLINE")}
+                                      disabled={processingPayment}
+                                      className="bg-blue-600 hover:bg-blue-700 flex-1"
+                                    >
+                                      <QrCode className="w-3 h-3 mr-2" />
+                                      Online
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handlePaymentAction("CASH")}
+                                      disabled={processingPayment}
+                                      className="bg-green-600 hover:bg-green-700 flex-1"
+                                    >
+                                      <Coins className="w-3 h-3 mr-2" />
+                                      Cash
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setShowPaymentMethods(false)}
+                                      disabled={processingPayment}
+                                      className="flex-shrink-0"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Column: Distribution */}
+                      <div className="space-y-6">
+                        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border h-full">
+                          <h3 className="font-medium text-lg mb-4">
+                            Tshirt and BIB
+                          </h3>
+                          
+                          <div className="grid grid-cols-1 gap-4">
+                            {/* T-Shirt Distribution */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2 bg-purple-100 rounded-full">
+                                  <ShoppingBag className="w-5 h-5 text-purple-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">T-Shirt</div>
+                                  <div className="text-sm text-gray-500">
+                                    {participant.wants_tshirt ? (
+                                      <span className="font-medium text-purple-700">
+                                        Size: {participant.t_shirt_size || "N/A"}
+                                      </span>
+                                    ) : (
+                                      "Not Required"
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                {participant.wants_tshirt ? (
+                                  participant.received_tshirt ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      <Check className="w-3 h-3 mr-1" />
+                                      Received
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      onClick={() => handleUpdateItemStatus("tshirt")}
+                                      disabled={!canDistributeItems() || updatingItem === "tshirt"}
+                                      className="bg-purple-600 hover:bg-purple-700"
+                                    >
+                                      {updatingItem === "tshirt" ? "Updating..." : "Mark Received"}
+                                    </Button>
+                                  )
+                                ) : (
+                                  <span className="text-xs text-gray-400">Skipped</span>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {/* Bib Distribution */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2 bg-orange-100 rounded-full">
+                                  <Tag className="w-5 h-5 text-orange-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">Bib Number</div>
+                                  <div className="text-sm font-medium text-orange-700">
+                                    #{participant.bib_num?.toString()}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div>
+                                {participant.received_bib ? (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Received
+                                  </span>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleUpdateItemStatus("bib")}
+                                    disabled={!canDistributeItems() || updatingItem === "bib"}
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                  >
+                                    {updatingItem === "bib" ? "Updating..." : "Mark Received"}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {!canDistributeItems() && (
+                              <div className="text-xs text-center text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
+                                Complete payment to enable distribution
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default OpenCategoryVerification;

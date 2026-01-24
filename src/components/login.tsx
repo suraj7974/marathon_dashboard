@@ -70,16 +70,16 @@ const Login = () => {
   const loginSections = [
     {
       role: "verify" as AuthRole,
-      label: "Verify Section",
+      label: "Npr & Bastar",
       icon: ShieldCheck,
       description: "ID verification & payments",
       gradient: "from-emerald-500 to-teal-600",
     },
     {
       role: "shirt" as AuthRole,
-      label: "T-Shirt Section",
+      label: "Open category",
       icon: Shirt,
-      description: "T-shirt distribution",
+      description: "payment and distribution",
       gradient: "from-violet-500 to-purple-600",
     },
     {
