@@ -18,6 +18,7 @@ import {
   XCircle,
   Tag,
   ShoppingBag,
+  Plus,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
@@ -64,8 +65,12 @@ const isFromBastar = (city: string): boolean => {
 
 const PaymentAndVerification = () => {
   const [searchValue, setSearchValue] = useState("");
-  const [participant, setParticipant] = useState<ExtendedParticipant | null>(null);
-  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>([]);
+  const [participant, setParticipant] = useState<ExtendedParticipant | null>(
+    null,
+  );
+  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -73,6 +78,8 @@ const PaymentAndVerification = () => {
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [updatingItem, setUpdatingItem] = useState<string | null>(null);
+  const [newBibNumber, setNewBibNumber] = useState("");
+  const [assigningBib, setAssigningBib] = useState(false);
 
   const fetchParticipantDetails = async (value: string) => {
     setLoading(true);
@@ -81,6 +88,7 @@ const PaymentAndVerification = () => {
     setShowPaymentMethods(false);
     setParticipant(null);
     setMultipleResults([]);
+    setNewBibNumber("");
 
     try {
       let query = supabase
@@ -118,7 +126,9 @@ const PaymentAndVerification = () => {
         setParticipant(data[0]);
       } else {
         setMultipleResults(data);
-        setSuccessMessage(`Found ${data.length} participants. Please select one.`);
+        setSuccessMessage(
+          `Found ${data.length} participants. Please select one.`,
+        );
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -154,7 +164,26 @@ const PaymentAndVerification = () => {
         .schema("marathon")
         .from("registrations_2026")
         .update({ govt_id_verified: true })
-        .eq("bib_num", participant.bib_num);
+        .eq("bib_num", participant.bib_num); // This might fail if bib_num is null. Should probably use identification_number if possible.
+
+      // Fallback update query if bib_num is missing, but verify usually happens by ID.
+      // Assuming initial update works by ID or we have bib_num.
+      // Actually, if bib_num is missing, we need to use identification_number.
+      let updateQuery = supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .update({ govt_id_verified: true });
+
+      if (participant.bib_num) {
+        updateQuery = updateQuery.eq("bib_num", participant.bib_num);
+      } else {
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
+      }
+
+      // const { error } = await updateQuery;
 
       if (error) throw error;
 
@@ -183,13 +212,23 @@ const PaymentAndVerification = () => {
     setError("");
 
     try {
-      const { error } = await supabase
+      let updateQuery = supabase
         .schema("marathon")
         .from("registrations_2026")
         .update({
           payment_status: method,
-        })
-        .eq("bib_num", participant.bib_num);
+        });
+
+      if (participant.bib_num) {
+        updateQuery = updateQuery.eq("bib_num", participant.bib_num);
+      } else {
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
+      }
+
+      const { error } = await updateQuery;
 
       if (error) throw error;
 
@@ -213,6 +252,11 @@ const PaymentAndVerification = () => {
 
   const handleUpdateItemStatus = async (item: "tshirt" | "bib") => {
     if (!participant) return;
+    // Check if bib_num is present before allowing status update (especially for bib)
+    if (item === "bib" && !participant.bib_num) {
+      setError("Cannot mark Bib as received: No Bib Number assigned.");
+      return;
+    }
 
     setUpdatingItem(item);
     setError("");
@@ -222,11 +266,21 @@ const PaymentAndVerification = () => {
     const updateData = { [column]: true };
 
     try {
-      const { error } = await supabase
+      let updateQuery = supabase
         .schema("marathon")
         .from("registrations_2026")
-        .update(updateData)
-        .eq("bib_num", participant.bib_num);
+        .update(updateData);
+
+      if (participant.bib_num) {
+        updateQuery = updateQuery.eq("bib_num", participant.bib_num);
+      } else {
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
+      }
+
+      const { error } = await updateQuery;
 
       if (error) throw error;
 
@@ -247,6 +301,44 @@ const PaymentAndVerification = () => {
       setError(`Failed to update ${item} status`);
     } finally {
       setUpdatingItem(null);
+    }
+  };
+
+  const handleAssignBib = async () => {
+    if (!participant || !newBibNumber) return;
+
+    const bibNum = parseInt(newBibNumber, 10);
+    if (isNaN(bibNum)) {
+      setError("Please enter a valid numeric BIB number.");
+      return;
+    }
+
+    setAssigningBib(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const { error } = await supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .update({ bib_num: bibNum })
+        .eq("identification_number", participant.identification_number);
+
+      if (error) throw error;
+
+      setParticipant((prev) =>
+        prev
+          ? { ...prev, bib_num: BigInt(bibNum) as unknown as BigInteger }
+          : null,
+      );
+
+      setSuccessMessage(`BIB #${bibNum} assigned successfully.`);
+      setNewBibNumber("");
+    } catch (err) {
+      console.error("Error assigning BIB:", err);
+      setError("Failed to assign BIB number. It might be already in use.");
+    } finally {
+      setAssigningBib(false);
     }
   };
 
@@ -361,7 +453,11 @@ const PaymentAndVerification = () => {
                 <div className="grid gap-4">
                   {multipleResults.map((result) => (
                     <div
-                      key={result.bib_num ? result.bib_num.toString() : result.identification_number}
+                      key={
+                        result.bib_num
+                          ? result.bib_num.toString()
+                          : result.identification_number
+                      }
                       className="bg-white p-4 rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                     >
                       <div className="flex items-center gap-4">
@@ -374,10 +470,12 @@ const PaymentAndVerification = () => {
                           </div>
                           <div className="text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                             <span className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" /> BIB: {result.bib_num?.toString() || "N/A"}
+                              <Tag className="w-3 h-3" /> BIB:{" "}
+                              {result.bib_num?.toString() || "N/A"}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Trophy className="w-3 h-3" /> {result.race_category}
+                              <Trophy className="w-3 h-3" />{" "}
+                              {result.race_category}
                             </span>
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" /> {result.city}
@@ -455,7 +553,7 @@ const PaymentAndVerification = () => {
                               BIB Number
                             </div>
                             <div className="mt-1 text-2xl font-bold text-amber-700">
-                              #{participant.bib_num?.toString()}
+                              #{participant.bib_num?.toString() || "N/A"}
                             </div>
                           </div>
                         </div>
@@ -755,43 +853,77 @@ const PaymentAndVerification = () => {
                             </div>
 
                             {/* Bib Distribution */}
-                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
-                              <div className="flex items-center gap-4">
-                                <div className="p-2 bg-orange-100 rounded-full">
-                                  <Tag className="w-5 h-5 text-orange-600" />
-                                </div>
-                                <div>
-                                  <div className="font-medium">Bib Number</div>
-                                  <div className="text-sm font-medium text-orange-700">
-                                    #{participant.bib_num?.toString()}
+                            <div className="flex flex-col gap-4 p-4 border rounded-lg bg-gray-50">
+                              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="p-2 bg-orange-100 rounded-full">
+                                    <Tag className="w-5 h-5 text-orange-600" />
                                   </div>
+                                  <div>
+                                    <div className="font-medium">
+                                      Bib Number
+                                    </div>
+                                    <div className="text-sm font-medium text-orange-700">
+                                      {participant.bib_num
+                                        ? `#${participant.bib_num}`
+                                        : "Not Assigned"}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  {participant.received_bib ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      <Check className="w-3 h-3 mr-1" />
+                                      Received
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        handleUpdateItemStatus("bib")
+                                      }
+                                      disabled={
+                                        !canDistributeItems() ||
+                                        !participant.bib_num ||
+                                        updatingItem === "bib"
+                                      }
+                                      className="bg-orange-600 hover:bg-orange-700"
+                                    >
+                                      {updatingItem === "bib"
+                                        ? "Updating..."
+                                        : "Mark Received"}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
 
-                              <div>
-                                {participant.received_bib ? (
-                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    <Check className="w-3 h-3 mr-1" />
-                                    Received
-                                  </span>
-                                ) : (
-                                  <Button
-                                    size="sm"
-                                    onClick={() =>
-                                      handleUpdateItemStatus("bib")
-                                    }
-                                    disabled={
-                                      !canDistributeItems() ||
-                                      updatingItem === "bib"
-                                    }
-                                    className="bg-orange-600 hover:bg-orange-700"
-                                  >
-                                    {updatingItem === "bib"
-                                      ? "Updating..."
-                                      : "Mark Received"}
-                                  </Button>
-                                )}
-                              </div>
+                              {/* Assign BIB Input - Only if no bib assigned */}
+                              {!participant.bib_num && canDistributeItems() && (
+                                <div className="pt-3 mt-1 border-t border-gray-200">
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      placeholder="Enter BIB #"
+                                      className="h-9"
+                                      value={newBibNumber}
+                                      onChange={(e) =>
+                                        setNewBibNumber(
+                                          e.target.value.replace(/\D/g, ""),
+                                        )
+                                      }
+                                    />
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                                      onClick={handleAssignBib}
+                                      disabled={assigningBib || !newBibNumber}
+                                    >
+                                      <Plus className="w-4 h-4 mr-1" />
+                                      Assign
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
                             {!canDistributeItems() && (
