@@ -64,9 +64,8 @@ const isFromBastar = (city: string): boolean => {
 
 const PaymentAndVerification = () => {
   const [searchValue, setSearchValue] = useState("");
-  const [participant, setParticipant] = useState<ExtendedParticipant | null>(
-    null,
-  );
+  const [participant, setParticipant] = useState<ExtendedParticipant | null>(null);
+  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -80,6 +79,8 @@ const PaymentAndVerification = () => {
     setError("");
     setSuccessMessage("");
     setShowPaymentMethods(false);
+    setParticipant(null);
+    setMultipleResults([]);
 
     try {
       let query = supabase
@@ -105,25 +106,32 @@ const PaymentAndVerification = () => {
         searchType = "Unique ID";
       }
 
-      const { data, error: searchError } = await query.maybeSingle();
+      const { data, error: searchError } = await query;
 
       if (searchError) {
         throw searchError;
       }
 
-      if (data) {
-        setParticipant(data);
-      } else {
+      if (!data || data.length === 0) {
         setError(`No participant found with ${searchType}: ${trimmedValue}`);
-        setParticipant(null);
+      } else if (data.length === 1) {
+        setParticipant(data[0]);
+      } else {
+        setMultipleResults(data);
+        setSuccessMessage(`Found ${data.length} participants. Please select one.`);
       }
     } catch (err) {
       console.error("Fetch error:", err);
       setError("Error fetching participant details");
-      setParticipant(null);
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSelectParticipant = (selected: ExtendedParticipant) => {
+    setParticipant(selected);
+    setMultipleResults([]);
+    setSuccessMessage("");
   };
 
   const handleSearch = () => {
@@ -342,6 +350,51 @@ const PaymentAndVerification = () => {
                   {successMessage}
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* Multiple Results Selection */}
+            {multipleResults.length > 0 && !participant && (
+              <div className="space-y-4 mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Select a participant:
+                </h3>
+                <div className="grid gap-4">
+                  {multipleResults.map((result) => (
+                    <div
+                      key={result.bib_num ? result.bib_num.toString() : result.identification_number}
+                      className="bg-white p-4 rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 bg-blue-100 rounded-full">
+                          <User className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <div className="font-medium text-lg">
+                            {result.first_name} {result.last_name}
+                          </div>
+                          <div className="text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
+                            <span className="flex items-center gap-1">
+                              <Tag className="w-3 h-3" /> BIB: {result.bib_num?.toString() || "N/A"}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Trophy className="w-3 h-3" /> {result.race_category}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <MapPin className="w-3 h-3" /> {result.city}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => handleSelectParticipant(result)}
+                        className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                      >
+                        Select
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
             )}
 
             {/* Participant Details */}
