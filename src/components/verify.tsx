@@ -17,6 +17,7 @@ import {
   Check,
   XCircle,
   Tag,
+  ShoppingBag,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
@@ -33,6 +34,11 @@ const BASTAR_REGION_CITIES = [
   "bijapur",
   "sukma",
 ];
+
+// Extended Participant interface to include potential new columns
+interface ExtendedParticipant extends Participant {
+  received_bib?: boolean;
+}
 
 const getIdType = (id: string): string => {
   if (!id) return "";
@@ -57,37 +63,49 @@ const isFromBastar = (city: string): boolean => {
 };
 
 const PaymentAndVerification = () => {
-  const [bibNumber, setBibNumber] = useState("");
-  const [participant, setParticipant] = useState<Participant | null>(null);
+  const [searchValue, setSearchValue] = useState("");
+  const [participant, setParticipant] = useState<ExtendedParticipant | null>(
+    null,
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [verifyingId, setVerifyingId] = useState(false);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [updatingItem, setUpdatingItem] = useState<string | null>(null);
 
-  const fetchParticipantDetails = async (bib: string) => {
+  const fetchParticipantDetails = async (value: string) => {
     setLoading(true);
     setError("");
     setSuccessMessage("");
     setShowPaymentMethods(false);
 
     try {
-      // Search by BIB number (primary)
-      const bibNum = parseInt(bib, 10);
-
-      if (isNaN(bibNum)) {
-        setError("Please enter a valid BIB number");
-        setParticipant(null);
-        return;
-      }
-
-      const { data, error: searchError } = await supabase
+      let query = supabase
         .schema("marathon")
         .from("registrations_2026")
-        .select("*")
-        .eq("bib_num", bibNum)
-        .maybeSingle();
+        .select("*");
+
+      const trimmedValue = value.trim();
+      let searchType = "";
+
+      // Determine search type
+      if (/^\d{10}$/.test(trimmedValue)) {
+        // Mobile number (10 digits)
+        query = query.eq("mobile", trimmedValue);
+        searchType = "Mobile Number";
+      } else if (/^\d+$/.test(trimmedValue)) {
+        // BIB Number (numeric, not 10 digits)
+        query = query.eq("bib_num", parseInt(trimmedValue, 10));
+        searchType = "BIB Number";
+      } else {
+        // Unique ID (alphanumeric)
+        query = query.eq("identification_number", trimmedValue.toUpperCase());
+        searchType = "Unique ID";
+      }
+
+      const { data, error: searchError } = await query.maybeSingle();
 
       if (searchError) {
         throw searchError;
@@ -96,7 +114,7 @@ const PaymentAndVerification = () => {
       if (data) {
         setParticipant(data);
       } else {
-        setError(`No participant found with BIB: ${bib}`);
+        setError(`No participant found with ${searchType}: ${trimmedValue}`);
         setParticipant(null);
       }
     } catch (err) {
@@ -109,11 +127,11 @@ const PaymentAndVerification = () => {
   };
 
   const handleSearch = () => {
-    if (!bibNumber.trim()) {
-      setError("Please enter a BIB number");
+    if (!searchValue.trim()) {
+      setError("Please enter a value to search");
       return;
     }
-    fetchParticipantDetails(bibNumber.trim());
+    fetchParticipantDetails(searchValue.trim());
   };
 
   const handleVerifyGovtId = async () => {
@@ -185,6 +203,45 @@ const PaymentAndVerification = () => {
     }
   };
 
+  const handleUpdateItemStatus = async (item: "tshirt" | "bib") => {
+    if (!participant) return;
+
+    setUpdatingItem(item);
+    setError("");
+    setSuccessMessage("");
+
+    const column = item === "tshirt" ? "received_tshirt" : "received_bib";
+    const updateData = { [column]: true };
+
+    try {
+      const { error } = await supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .update(updateData)
+        .eq("bib_num", participant.bib_num);
+
+      if (error) throw error;
+
+      setParticipant((prev) =>
+        prev
+          ? {
+              ...prev,
+              [column]: true,
+            }
+          : null,
+      );
+
+      setSuccessMessage(
+        `${item === "tshirt" ? "T-shirt" : "Bib"} marked as received`,
+      );
+    } catch (err) {
+      console.error(`Error updating ${item} status:`, err);
+      setError(`Failed to update ${item} status`);
+    } finally {
+      setUpdatingItem(null);
+    }
+  };
+
   const getPaymentAmount = () => {
     if (!participant) return 0;
     if (
@@ -216,6 +273,12 @@ const PaymentAndVerification = () => {
     return participant.payment_status === "OFFLINE";
   };
 
+  const canDistributeItems = () => {
+    if (!participant) return false;
+    // Enabled only if payment is complete AND government ID is verified
+    return isPaymentComplete() && participant.govt_id_verified;
+  };
+
   return (
     <div className="min-h-screen">
       <div className="container mx-auto px-4 py-8">
@@ -229,11 +292,11 @@ const PaymentAndVerification = () => {
             {/* Search Section */}
             <div className="flex flex-col sm:flex-row gap-3 px-4 sm:px-8 md:px-16 lg:px-32">
               <Input
-                id="bib-search"
+                id="search-input"
                 type="text"
-                placeholder="Enter BIB Number"
-                value={bibNumber}
-                onChange={(e) => setBibNumber(e.target.value)}
+                placeholder="Enter BIB, Mobile (10 digits) or Unique ID"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     handleSearch();
@@ -404,189 +467,289 @@ const PaymentAndVerification = () => {
 
                         {/* Wants T-shirt info */}
                         <div className="flex items-start gap-3">
-                          <div className="w-6 h-6 text-teal-500 mt-1 shrink-0 flex items-center justify-center">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              width="24"
-                              height="24"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z" />
-                            </svg>
-                          </div>
+                          <ShoppingBag className="w-6 h-6 text-teal-500 mt-1 shrink-0" />
                           <div className="flex-1">
                             <div className="text-sm text-gray-500">
-                              Wants T-shirt
+                              T-Shirt Info
                             </div>
                             <div className="mt-1">
-                              <span
-                                className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                                  participant.wants_tshirt
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-gray-100 text-gray-800"
-                                }`}
-                              >
-                                {participant.wants_tshirt ? "Yes" : "No"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Government ID Verification Section */}
-                    <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                      <h3 className="font-medium text-lg mb-4">
-                        Government ID Verification
-                      </h3>
-
-                      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                        <div
-                          className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
-                            participant.govt_id_verified
-                              ? "bg-green-100 text-green-800"
-                              : "bg-yellow-100 text-yellow-800"
-                          }`}
-                        >
-                          {participant.govt_id_verified
-                            ? "ID Verified"
-                            : "ID Not Verified"}
-                        </div>
-
-                        {!participant.govt_id_verified ? (
-                          <Button
-                            onClick={handleVerifyGovtId}
-                            disabled={verifyingId}
-                            className="bg-green-600 hover:bg-green-700"
-                          >
-                            {verifyingId ? (
-                              "Verifying..."
-                            ) : (
-                              <>
-                                <Shield className="w-4 h-4 mr-2" />
-                                Verify ID
-                              </>
-                            )}
-                          </Button>
-                        ) : (
-                          <div className="flex items-center text-green-600 gap-2">
-                            <Shield className="w-5 h-5" />
-                            <span>ID has been verified</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {!participant.govt_id && (
-                        <p className="text-sm text-gray-500 mt-3">
-                          Note: No government ID was provided during
-                          registration. You can still verify if physical ID is
-                          shown.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Payment Section */}
-                    <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                      <h3 className="font-medium text-lg mb-4">
-                        Payment Verification
-                      </h3>
-
-                      {isPaymentComplete() ? (
-                        <div className="flex items-center gap-3">
-                          <div className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                            Payment Complete
-                          </div>
-                          <div className="text-green-600 flex items-center gap-2">
-                            <Check className="w-5 h-5" />
-                            <span>
-                              Paid via{" "}
-                              {participant.payment_status?.toUpperCase()}
-                            </span>
-                          </div>
-                        </div>
-                      ) : needsPayment() ? (
-                        <div className="space-y-4">
-                          <div className="flex items-center gap-3">
-                            <div className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
-                              Payment Pending
-                            </div>
-                            <span className="text-gray-600">
-                              Amount to collect:{" "}
-                              <strong className="text-lg">
-                                Rs. {getPaymentAmount()}
-                              </strong>
-                              {participant.wants_tshirt
-                                ? " (Registration + T-shirt)"
-                                : " (Registration only)"}
-                            </span>
-                          </div>
-
-                          {showPaymentMethods ? (
-                            <div className="space-y-3">
-                              <p className="text-sm text-gray-600">
-                                Select payment method:
-                              </p>
-                              <div className="flex flex-col sm:flex-row gap-3">
-                                <Button
-                                  onClick={() => handlePaymentAction("ONLINE")}
-                                  disabled={processingPayment}
-                                  className="bg-blue-600 hover:bg-blue-700"
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
+                                    participant.wants_tshirt
+                                      ? "bg-green-100 text-green-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  }`}
                                 >
-                                  <QrCode className="w-4 h-4 mr-2" />
-                                  {processingPayment
-                                    ? "Processing..."
-                                    : "Online Payment"}
-                                </Button>
-                                <Button
-                                  onClick={() => handlePaymentAction("CASH")}
-                                  disabled={processingPayment}
-                                  className="bg-green-600 hover:bg-green-700"
-                                >
-                                  <Coins className="w-4 h-4 mr-2" />
-                                  {processingPayment
-                                    ? "Processing..."
-                                    : "Cash Payment"}
-                                </Button>
-                                <Button
-                                  onClick={() => setShowPaymentMethods(false)}
-                                  variant="outline"
-                                  disabled={processingPayment}
-                                >
-                                  Cancel
-                                </Button>
+                                  {participant.wants_tshirt ? "Yes" : "No"}
+                                </span>
+                                {participant.wants_tshirt &&
+                                  participant.t_shirt_size && (
+                                    <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                      Size: {participant.t_shirt_size}
+                                    </span>
+                                  )}
                               </div>
                             </div>
-                          ) : (
-                            <Button
-                              onClick={() => setShowPaymentMethods(true)}
-                              className="bg-green-600 hover:bg-green-700"
-                            >
-                              <CreditCard className="w-4 h-4 mr-2" />
-                              Take Payment: Rs. {getPaymentAmount()}
-                            </Button>
-                          )}
+                          </div>
                         </div>
-                      ) : (
-                        <div className="text-gray-600">
-                          <p>
-                            Current status:{" "}
-                            <strong>
-                              {participant.payment_status?.toUpperCase() ||
-                                "PENDING"}
-                            </strong>
-                          </p>
-                          <p className="text-sm mt-2">
-                            This participant has payment status "
-                            {participant.payment_status}". No payment action
-                            required at this counter.
-                          </p>
+                      </div>
+                    </div>
+
+                    {/* Main Action Grid - 2x2 Matrix */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+                      {/* Left Column: Verification & Payment (Combined) */}
+                      <div className="space-y-6">
+                        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border h-full">
+                          <h3 className="font-medium text-lg mb-4">
+                            Verification & Payment
+                          </h3>
+
+                          <div className="grid grid-cols-1 gap-4">
+                            {/* Government ID Item */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2 bg-blue-100 rounded-full">
+                                  <Shield className="w-5 h-5 text-blue-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    Government ID
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {participant.govt_id_verified
+                                      ? "Verified"
+                                      : "Verification Required"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                {participant.govt_id_verified ? (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Verified
+                                  </span>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={handleVerifyGovtId}
+                                    disabled={verifyingId}
+                                    className="bg-blue-600 hover:bg-blue-700"
+                                  >
+                                    {verifyingId ? "Verifying..." : "Verify ID"}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Payment Item */}
+                            <div className="flex flex-col gap-4 p-4 border rounded-lg bg-gray-50">
+                              {/* Top row with Info and Status */}
+                              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                  <div className="p-2 bg-amber-100 rounded-full">
+                                    <CreditCard className="w-5 h-5 text-amber-600" />
+                                  </div>
+                                  <div>
+                                    <div className="font-medium">Payment</div>
+                                    <div className="text-sm text-gray-500">
+                                      {isPaymentComplete()
+                                        ? "Completed"
+                                        : `Due: Rs. ${getPaymentAmount()}`}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  {isPaymentComplete() ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      <Check className="w-3 h-3 mr-1" />
+                                      {participant.payment_status?.toUpperCase()}
+                                    </span>
+                                  ) : needsPayment() && !showPaymentMethods ? (
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        setShowPaymentMethods(true)
+                                      }
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
+                                      Take Payment
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-gray-500 font-medium">
+                                      {participant.payment_status?.toUpperCase() ||
+                                        "PENDING"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Expanded Payment Methods */}
+                              {showPaymentMethods && (
+                                <div className="pt-3 mt-1 border-t border-gray-200">
+                                  <p className="text-xs text-gray-500 mb-3">
+                                    Select Method:
+                                  </p>
+                                  <div className="flex flex-wrap gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        handlePaymentAction("ONLINE")
+                                      }
+                                      disabled={processingPayment}
+                                      className="bg-blue-600 hover:bg-blue-700 flex-1"
+                                    >
+                                      <QrCode className="w-3 h-3 mr-2" />
+                                      Online
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        handlePaymentAction("CASH")
+                                      }
+                                      disabled={processingPayment}
+                                      className="bg-green-600 hover:bg-green-700 flex-1"
+                                    >
+                                      <Coins className="w-3 h-3 mr-2" />
+                                      Cash
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        setShowPaymentMethods(false)
+                                      }
+                                      disabled={processingPayment}
+                                      className="flex-shrink-0"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {!participant.govt_id && (
+                              <p className="text-xs text-center text-gray-500">
+                                No physical ID provided in registration.
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      )}
+                      </div>
+
+                      {/* Right Column: Distribution */}
+                      <div className="space-y-6">
+                        <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border h-full">
+                          <h3 className="font-medium text-lg mb-4">
+                            Tshirt and BIB
+                          </h3>
+
+                          <div className="grid grid-cols-1 gap-4">
+                            {/* T-Shirt Distribution */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2 bg-purple-100 rounded-full">
+                                  <ShoppingBag className="w-5 h-5 text-purple-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">T-Shirt</div>
+                                  <div className="text-sm text-gray-500">
+                                    {participant.wants_tshirt ? (
+                                      <span className="font-medium text-purple-700">
+                                        Size:{" "}
+                                        {participant.t_shirt_size || "N/A"}
+                                      </span>
+                                    ) : (
+                                      "Not Required"
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                {participant.wants_tshirt ? (
+                                  participant.received_tshirt ? (
+                                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                      <Check className="w-3 h-3 mr-1" />
+                                      Received
+                                    </span>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        handleUpdateItemStatus("tshirt")
+                                      }
+                                      disabled={
+                                        !canDistributeItems() ||
+                                        updatingItem === "tshirt"
+                                      }
+                                      className="bg-purple-600 hover:bg-purple-700"
+                                    >
+                                      {updatingItem === "tshirt"
+                                        ? "Updating..."
+                                        : "Mark Received"}
+                                    </Button>
+                                  )
+                                ) : (
+                                  <span className="text-xs text-gray-400">
+                                    Skipped
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Bib Distribution */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
+                              <div className="flex items-center gap-4">
+                                <div className="p-2 bg-orange-100 rounded-full">
+                                  <Tag className="w-5 h-5 text-orange-600" />
+                                </div>
+                                <div>
+                                  <div className="font-medium">Bib Number</div>
+                                  <div className="text-sm font-medium text-orange-700">
+                                    #{participant.bib_num?.toString()}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div>
+                                {participant.received_bib ? (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Received
+                                  </span>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    onClick={() =>
+                                      handleUpdateItemStatus("bib")
+                                    }
+                                    disabled={
+                                      !canDistributeItems() ||
+                                      updatingItem === "bib"
+                                    }
+                                    className="bg-orange-600 hover:bg-orange-700"
+                                  >
+                                    {updatingItem === "bib"
+                                      ? "Updating..."
+                                      : "Mark Received"}
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+
+                            {!canDistributeItems() && (
+                              <div className="text-xs text-center text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
+                                Complete verification & payment first to
+                                distribute Tshirt and BIB
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </>
                 )}
