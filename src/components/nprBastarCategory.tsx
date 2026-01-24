@@ -160,15 +160,6 @@ const PaymentAndVerification = () => {
     setError("");
 
     try {
-      const { error } = await supabase
-        .schema("marathon")
-        .from("registrations_2026")
-        .update({ govt_id_verified: true })
-        .eq("bib_num", participant.bib_num); // This might fail if bib_num is null. Should probably use identification_number if possible.
-
-      // Fallback update query if bib_num is missing, but verify usually happens by ID.
-      // Assuming initial update works by ID or we have bib_num.
-      // Actually, if bib_num is missing, we need to use identification_number.
       let updateQuery = supabase
         .schema("marathon")
         .from("registrations_2026")
@@ -183,7 +174,7 @@ const PaymentAndVerification = () => {
         );
       }
 
-      // const { error } = await updateQuery;
+      const { error } = await updateQuery;
 
       if (error) throw error;
 
@@ -773,7 +764,7 @@ const PaymentAndVerification = () => {
                                         setShowPaymentMethods(false)
                                       }
                                       disabled={processingPayment}
-                                      className="flex-shrink-0"
+                                      className="shrink-0"
                                     >
                                       Cancel
                                     </Button>
