@@ -1,14 +1,26 @@
 import { ReactNode, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getStoredAuth, clearStoredAuth } from "../lib/auth";
-import { SessionManager, checkSessionExpired, setSessionStartTime } from "../lib/session-timeout";
+import {
+  SessionManager,
+  checkSessionExpired,
+  setSessionStartTime,
+} from "../lib/session-timeout";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requiredRole: "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit" | "verify" | "influencers" | "inventory" | "bulksales";
+  requiredRole:
+    | "open"
+    | "NprBastar"
+    | "influencers"
+    | "inventory"
+    | "bulksales";
 }
 
-export const ProtectedRoute = ({ children, requiredRole }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({
+  children,
+  requiredRole,
+}: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const storedRole = getStoredAuth();
 

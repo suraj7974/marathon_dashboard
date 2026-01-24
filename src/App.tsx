@@ -8,9 +8,7 @@ import { ProtectedRoute } from "@/components/protected-route";
 import Login from "@/components/login";
 import PaymentAndVerification from "@/components/nprBastarCategory";
 import TShirtDistribution from "@/components/openCategory";
-import HospitalityKitDistribution from "@/components/step4";
 import ViewDetails from "@/components/viewdetails";
-import MobileSearch from "@/components/mobilesearch";
 import AccommodationManagement from "@/components/viewvenue";
 import Influencers from "@/components/influencers";
 import TshirtInventory from "@/components/tshirt-inventory";
@@ -23,32 +21,22 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/mobile" element={<MobileSearch />} />
         <Route path="/view-venue" element={<AccommodationManagement />} />
 
         <Route
-          path="/verify"
+          path="/NprBastar"
           element={
-            <ProtectedRoute requiredRole="verify">
+            <ProtectedRoute requiredRole="NprBastar">
               <PaymentAndVerification />
             </ProtectedRoute>
           }
         />
 
         <Route
-          path="/shirt"
+          path="/open"
           element={
-            <ProtectedRoute requiredRole="shirt">
+            <ProtectedRoute requiredRole="open">
               <TShirtDistribution />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/kit"
-          element={
-            <ProtectedRoute requiredRole="kit">
-              <HospitalityKitDistribution />
             </ProtectedRoute>
           }
         />

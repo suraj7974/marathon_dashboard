@@ -1,13 +1,8 @@
-type Role = "payment" | "shirt" | "bib" | "govt" | "tshirt" | "kit" | "verify" | "influencers" | "inventory" | "bulksales";
+type Role = "NprBastar" | "open" | "influencers" | "inventory" | "bulksales";
 
 const PASSWORDS = {
-  payment: "lorem1234",
-  shirt: "lorem1234",
-  bib: "lorem1234",
-  govt: "lorem1234",
-  tshirt: "lorem1234",
-  kit: "lorem1234",
-  verify: "lorem1234",
+  NprBastar: "lorem1234",
+  open: "lorem1234",
   influencers: "lorem1234",
   inventory: "lorem1234",
   bulksales: "lorem1234",

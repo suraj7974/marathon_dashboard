@@ -20,13 +20,8 @@ import {
 } from "lucide-react";
 
 type AuthRole =
-  | "payment"
-  | "shirt"
-  | "bib"
-  | "govt"
-  | "tshirt"
-  | "kit"
-  | "verify"
+  | "NprBastar"
+  | "open"
   | "influencers"
   | "inventory"
   | "bulksales";
@@ -41,12 +36,14 @@ const Login = () => {
       setStoredAuth(role);
       setSessionStartTime();
       // Navigate based on role
-      if (role === "verify") {
-        navigate("/verify");
-      } else if (role === "payment") {
-        navigate("/");
+      if (role === "NprBastar") {
+        navigate("/NprBastar");
+      } else if (role === "open") {
+        navigate("/open");
       } else if (role === "bulksales") {
         navigate("/bulk-sales");
+      } else if (role === "inventory") {
+        navigate("/inventory");
       } else {
         navigate(`/${role}`);
       }
@@ -59,36 +56,32 @@ const Login = () => {
     navigate("/view-details");
   };
 
-  const handleidsearch = () => {
-    navigate("/mobile");
-  };
-
   const handleidstaysearch = () => {
     navigate("/view-venue");
   };
 
   const loginSections = [
     {
-      role: "verify" as AuthRole,
+      role: "NprBastar" as AuthRole,
       label: "Npr & Bastar",
       icon: ShieldCheck,
       description: "ID verification & payments",
       gradient: "from-emerald-500 to-teal-600",
     },
     {
-      role: "shirt" as AuthRole,
+      role: "open" as AuthRole,
       label: "Open category",
       icon: Shirt,
       description: "payment and distribution",
       gradient: "from-violet-500 to-purple-600",
     },
-    {
-      role: "kit" as AuthRole,
-      label: "Kits Section",
-      icon: Package,
-      description: "Kit distribution",
-      gradient: "from-blue-500 to-cyan-600",
-    },
+    // {
+    //   role: "kit" as AuthRole,
+    //   label: "Kits Section",
+    //   icon: Package,
+    //   description: "Kit distribution",
+    //   gradient: "from-blue-500 to-cyan-600",
+    // },
     {
       role: "influencers" as AuthRole,
       label: "Influencers",
@@ -122,11 +115,6 @@ const Login = () => {
       onClick: handleViewDetails,
       label: "View Participant",
       icon: Eye,
-    },
-    {
-      onClick: handleidsearch,
-      label: "Find ID Number",
-      icon: Search,
     },
   ];
 
