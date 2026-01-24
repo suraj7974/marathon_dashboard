@@ -9,10 +9,8 @@ import { setSessionStartTime } from "../lib/session-timeout";
 import {
   ShieldCheck,
   Shirt,
-  Package,
   Users,
   Eye,
-  Search,
   MapPin,
   Lock,
   BarChart3,
