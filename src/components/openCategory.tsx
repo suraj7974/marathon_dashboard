@@ -185,6 +185,34 @@ const OpenCategoryVerification = () => {
     const updateData = { [column]: true };
 
     try {
+      // Decrement inventory if distributing t-shirt
+      if (item === "tshirt" && participant.t_shirt_size) {
+        const size = participant.t_shirt_size.toUpperCase();
+        // Check if size is one of the standard sizes managed in inventory
+        if (["S", "M", "L", "XL", "XXL"].includes(size)) {
+          const rpcParams = {
+            p_s: size === "S" ? 1 : 0,
+            p_m: size === "M" ? 1 : 0,
+            p_l: size === "L" ? 1 : 0,
+            p_xl: size === "XL" ? 1 : 0,
+            p_xxl: size === "XXL" ? 1 : 0,
+          };
+
+          const { data: decrementResult, error: decrementError } = await supabase
+            .schema("marathon")
+            .rpc("decrement_bulk_inventory", rpcParams);
+
+          if (decrementError) {
+            console.error("Inventory decrement failed:", decrementError);
+            // We log but continue - physical distribution takes precedence
+          } else if (decrementResult === false) {
+            console.warn(
+              `Inventory reported insufficient stock for size ${size}, but marking as received.`,
+            );
+          }
+        }
+      }
+
       let updateQuery = supabase
         .schema("marathon")
         .from("registrations_2026")
