@@ -80,6 +80,7 @@ const PaymentAndVerification = () => {
   const [updatingItem, setUpdatingItem] = useState<string | null>(null);
   const [newBibNumber, setNewBibNumber] = useState("");
   const [assigningBib, setAssigningBib] = useState(false);
+  const [failingVerification, setFailingVerification] = useState(false);
 
   const fetchParticipantDetails = async (value: string) => {
     setLoading(true);
@@ -150,6 +151,49 @@ const PaymentAndVerification = () => {
       return;
     }
     fetchParticipantDetails(searchValue.trim());
+  };
+
+  const handleFailVerification = async () => {
+    if (!participant) return;
+
+    setFailingVerification(true);
+    setSuccessMessage("");
+    setError("");
+
+    try {
+      let updateQuery = supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .update({ govt_id_verified: false });
+
+      if (participant.bib_num) {
+        updateQuery = updateQuery.eq("bib_num", participant.bib_num);
+      } else {
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
+      }
+
+      const { error } = await updateQuery;
+
+      if (error) throw error;
+
+      setParticipant((prev) =>
+        prev
+          ? {
+              ...prev,
+              govt_id_verified: false,
+            }
+          : null,
+      );
+
+      setShowPaymentMethods(false);
+    } catch (err) {
+      setError("Failed to update verification status");
+    } finally {
+      setFailingVerification(false);
+    }
   };
 
   const handleVerifyGovtId = async () => {
@@ -270,9 +314,10 @@ const PaymentAndVerification = () => {
             p_xxl: size === "XXL" ? 1 : 0,
           };
 
-          const { data: decrementResult, error: decrementError } = await supabase
-            .schema("marathon")
-            .rpc("decrement_bulk_inventory", rpcParams);
+          const { data: decrementResult, error: decrementError } =
+            await supabase
+              .schema("marathon")
+              .rpc("decrement_bulk_inventory", rpcParams);
 
           if (decrementError) {
             console.error("Inventory decrement failed:", decrementError);
@@ -395,7 +440,7 @@ const PaymentAndVerification = () => {
   const canDistributeItems = () => {
     if (!participant) return false;
     // Enabled only if payment is complete AND government ID is verified
-    return isPaymentComplete() && participant.govt_id_verified;
+    return isPaymentComplete() && participant.govt_id_verified === true;
   };
 
   return (
@@ -695,20 +740,37 @@ const PaymentAndVerification = () => {
                               </div>
 
                               <div>
-                                {participant.govt_id_verified ? (
+                                {participant.govt_id_verified === true ? (
                                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                                     <Check className="w-3 h-3 mr-1" />
                                     Verified
                                   </span>
+                                ) : participant.govt_id_verified === false ? (
+                                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    Failed
+                                  </span>
                                 ) : (
-                                  <Button
-                                    size="sm"
-                                    onClick={handleVerifyGovtId}
-                                    disabled={verifyingId}
-                                    className="bg-blue-600 hover:bg-blue-700"
-                                  >
-                                    {verifyingId ? "Verifying..." : "Verify ID"}
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      onClick={handleVerifyGovtId}
+                                      disabled={verifyingId}
+                                      className="bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      {verifyingId
+                                        ? "Verifying..."
+                                        : "Verify ID"}
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={handleFailVerification}
+                                      disabled={failingVerification}
+                                    >
+                                      {failingVerification ? "..." : "Fail"}
+                                    </Button>
+                                  </div>
                                 )}
                               </div>
                             </div>
@@ -737,7 +799,9 @@ const PaymentAndVerification = () => {
                                       <Check className="w-3 h-3 mr-1" />
                                       {participant.payment_status?.toUpperCase()}
                                     </span>
-                                  ) : needsPayment() && !showPaymentMethods ? (
+                                  ) : needsPayment() &&
+                                    !showPaymentMethods &&
+                                    participant.govt_id_verified !== false ? (
                                     <Button
                                       size="sm"
                                       onClick={() =>
