@@ -4,8 +4,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "./ui/dialog";
 import { authenticate, setStoredAuth } from "../lib/auth";
 import { setSessionStartTime } from "../lib/session-timeout";
+import { getStoredUid, createUid, validatePhoneNumber } from "../lib/uid";
 import {
   ShieldCheck,
   Shirt,
@@ -15,6 +23,10 @@ import {
   Lock,
   BarChart3,
   ShoppingCart,
+  User,
+  Phone,
+  Loader2,
+  ClipboardList,
 } from "lucide-react";
 
 type AuthRole =
@@ -22,31 +34,93 @@ type AuthRole =
   | "open"
   | "influencers"
   | "inventory"
-  | "bulksales";
+  | "bulksales"
+  | "reports";
 
 const Login = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  // UID Dialog state
+  const [showUidDialog, setShowUidDialog] = useState(false);
+  const [fullName, setFullName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [pendingRole, setPendingRole] = useState<AuthRole | null>(null);
+  const [uidLoading, setUidLoading] = useState(false);
+  const [uidError, setUidError] = useState("");
+
+  const navigateToRole = (role: AuthRole) => {
+    if (role === "NprBastar") {
+      navigate("/NprBastar");
+    } else if (role === "open") {
+      navigate("/open");
+    } else if (role === "bulksales") {
+      navigate("/bulk-sales");
+    } else if (role === "inventory") {
+      navigate("/inventory");
+    } else if (role === "reports") {
+      navigate("/reports");
+    } else {
+      navigate(`/${role}`);
+    }
+  };
+
   const handleLogin = (role: AuthRole) => {
     if (authenticate(role, password)) {
-      setStoredAuth(role);
-      setSessionStartTime();
-      // Navigate based on role
-      if (role === "NprBastar") {
-        navigate("/NprBastar");
-      } else if (role === "open") {
-        navigate("/open");
-      } else if (role === "bulksales") {
-        navigate("/bulk-sales");
-      } else if (role === "inventory") {
-        navigate("/inventory");
+      // Check if UID exists in localStorage
+      const existingUid = getStoredUid();
+
+      if (existingUid) {
+        // UID exists, proceed with login
+        setStoredAuth(role);
+        setSessionStartTime();
+        navigateToRole(role);
       } else {
-        navigate(`/${role}`);
+        // No UID, show dialog to collect name and phone
+        setPendingRole(role);
+        setShowUidDialog(true);
       }
     } else {
       setError("Invalid password");
+    }
+  };
+
+  const handleUidSubmit = async () => {
+    if (!fullName.trim()) {
+      setUidError("Please enter your full name");
+      return;
+    }
+
+    // Validate phone is exactly 10 digits
+    if (!validatePhoneNumber(phoneNumber)) {
+      setUidError("Phone number must be exactly 10 digits");
+      return;
+    }
+
+    if (!pendingRole) return;
+
+    setUidLoading(true);
+    setUidError("");
+
+    try {
+      await createUid(fullName, phoneNumber);
+
+      // UID created successfully, proceed with login
+      setStoredAuth(pendingRole);
+      setSessionStartTime();
+      setShowUidDialog(false);
+      navigateToRole(pendingRole);
+    } catch (err: unknown) {
+      console.error("Error creating UID:", err);
+      // Show the actual error message from the createUid function
+      if (err instanceof Error) {
+        setUidError(err.message);
+      } else {
+        setUidError("Failed to register. Please try again.");
+      }
+    } finally {
+      setUidLoading(false);
     }
   };
 
@@ -100,6 +174,13 @@ const Login = () => {
       icon: ShoppingCart,
       description: "Sell t-shirts to customers",
       gradient: "from-indigo-500 to-blue-600",
+    },
+    {
+      role: "reports" as AuthRole,
+      label: "Reports",
+      icon: ClipboardList,
+      description: "View activity reports",
+      gradient: "from-teal-500 to-emerald-600",
     },
   ];
 
@@ -197,6 +278,76 @@ const Login = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* UID Registration Dialog */}
+      <Dialog open={showUidDialog} onOpenChange={setShowUidDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">
+              Welcome! Please identify yourself
+            </DialogTitle>
+            <DialogDescription>
+              Enter your details to continue. This helps us track who performed
+              actions in the dashboard.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-4">
+            {/* Full Name Input */}
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="Full Name"
+                value={fullName}
+                onChange={(e) => {
+                  setFullName(e.target.value);
+                  setUidError("");
+                }}
+                className="pl-10 h-12"
+              />
+            </div>
+
+            {/* Phone Number Input */}
+            <div className="relative">
+              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="tel"
+                placeholder="Phone Number"
+                value={phoneNumber}
+                onChange={(e) => {
+                  setPhoneNumber(e.target.value);
+                  setUidError("");
+                }}
+                className="pl-10 h-12"
+              />
+            </div>
+
+            {/* Error Alert */}
+            {uidError && (
+              <Alert variant="destructive">
+                <AlertDescription>{uidError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Submit Button */}
+            <Button
+              onClick={handleUidSubmit}
+              disabled={uidLoading}
+              className="w-full h-12 text-base"
+            >
+              {uidLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Registering...
+                </>
+              ) : (
+                "Continue"
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

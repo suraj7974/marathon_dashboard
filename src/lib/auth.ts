@@ -1,11 +1,12 @@
-type Role = "NprBastar" | "open" | "influencers" | "inventory" | "bulksales";
+type Role = "NprBastar" | "open" | "influencers" | "inventory" | "bulksales" | "reports";
 
 const PASSWORDS = {
   NprBastar: "lorem1234",
   open: "lorem1234",
   influencers: "lorem1234",
-  inventory: "lorem1234",
+  inventory: "suraj1269",
   bulksales: "lorem1234",
+  reports: "lorem1234",
 };
 
 export const authenticate = (role: Role, password: string): boolean => {

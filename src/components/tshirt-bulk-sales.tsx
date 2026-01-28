@@ -17,6 +17,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { logEvent, LogEvents } from "../lib/logger";
 
 interface InventoryItem {
   size: string;
@@ -171,6 +172,17 @@ const TshirtBulkSales = () => {
       setSuccess(
         `Sale completed! ${getTotalQuantity()} t-shirts sold for Rs. ${getTotalAmount()}`,
       );
+
+      // Log bulk sale
+      logEvent(LogEvents.BULK_SALE_COMPLETED, {
+        category: "bulksales",
+        buyer_name: buyerName.trim(),
+        buyer_mobile: buyerMobile.trim() || null,
+        quantities: { ...quantities },
+        total_quantity: getTotalQuantity(),
+        total_amount: getTotalAmount(),
+        payment_method: paymentMethod,
+      });
 
       // Reset form
       setBuyerName("");

@@ -14,7 +14,8 @@ interface ProtectedRouteProps {
     | "NprBastar"
     | "influencers"
     | "inventory"
-    | "bulksales";
+    | "bulksales"
+    | "reports";
 }
 
 export const ProtectedRoute = ({

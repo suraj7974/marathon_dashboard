@@ -21,6 +21,7 @@ import {
   Plus,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { logEvent, LogEvents } from "../lib/logger";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
 
@@ -143,6 +144,15 @@ const PaymentAndVerification = () => {
     setParticipant(selected);
     setMultipleResults([]);
     setSuccessMessage("");
+
+    // Log participant selection
+    logEvent(LogEvents.PARTICIPANT_SELECTED, {
+      category: "nprbastarcategory",
+      participant_id: selected.identification_number,
+      bib_num: selected.bib_num?.toString() || null,
+      name: `${selected.first_name} ${selected.last_name}`,
+      city: selected.city,
+    });
   };
 
   const handleSearch = () => {
@@ -189,6 +199,15 @@ const PaymentAndVerification = () => {
       );
 
       setShowPaymentMethods(false);
+
+      // Log failed verification
+      logEvent(LogEvents.ID_VERIFICATION_FAILED, {
+        category: "nprbastarcategory",
+        participant_id: participant.identification_number,
+        bib_num: participant.bib_num?.toString() || null,
+        name: `${participant.first_name} ${participant.last_name}`,
+        govt_id: participant.govt_id,
+      });
     } catch (err) {
       setError("Failed to update verification status");
     } finally {
@@ -232,6 +251,15 @@ const PaymentAndVerification = () => {
       );
 
       setSuccessMessage("Government ID successfully verified");
+
+      // Log successful verification
+      logEvent(LogEvents.ID_VERIFIED, {
+        category: "nprbastarcategory",
+        participant_id: participant.identification_number,
+        bib_num: participant.bib_num?.toString() || null,
+        name: `${participant.first_name} ${participant.last_name}`,
+        govt_id: participant.govt_id,
+      });
     } catch (err) {
       setError("Failed to verify government ID");
     } finally {
@@ -278,6 +306,21 @@ const PaymentAndVerification = () => {
 
       setSuccessMessage(`Payment marked as ${method}`);
       setShowPaymentMethods(false);
+
+      // Log payment action
+      logEvent(
+        method === "ONLINE"
+          ? LogEvents.PAYMENT_MARKED_ONLINE
+          : LogEvents.PAYMENT_MARKED_CASH,
+        {
+          category: "nprbastarcategory",
+          participant_id: participant.identification_number,
+          bib_num: participant.bib_num?.toString() || null,
+          name: `${participant.first_name} ${participant.last_name}`,
+          payment_method: method,
+          amount: getPaymentAmount(),
+        }
+      );
     } catch (err) {
       setError("Failed to update payment status");
     } finally {
@@ -360,6 +403,19 @@ const PaymentAndVerification = () => {
       setSuccessMessage(
         `${item === "tshirt" ? "T-shirt" : "Bib"} marked as received`,
       );
+
+      // Log item distribution
+      logEvent(
+        item === "tshirt" ? LogEvents.TSHIRT_DISTRIBUTED : LogEvents.BIB_DISTRIBUTED,
+        {
+          category: "nprbastarcategory",
+          participant_id: participant.identification_number,
+          bib_num: participant.bib_num?.toString() || null,
+          name: `${participant.first_name} ${participant.last_name}`,
+          item_type: item,
+          t_shirt_size: item === "tshirt" ? participant.t_shirt_size : null,
+        }
+      );
     } catch (err) {
       console.error(`Error updating ${item} status:`, err);
       setError(`Failed to update ${item} status`);
@@ -398,6 +454,14 @@ const PaymentAndVerification = () => {
 
       setSuccessMessage(`BIB #${bibNum} assigned successfully.`);
       setNewBibNumber("");
+
+      // Log BIB assignment
+      logEvent(LogEvents.BIB_ASSIGNED, {
+        category: "nprbastarcategory",
+        participant_id: participant.identification_number,
+        name: `${participant.first_name} ${participant.last_name}`,
+        assigned_bib: bibNum,
+      });
     } catch (err) {
       console.error("Error assigning BIB:", err);
       setError("Failed to assign BIB number. It might be already in use.");

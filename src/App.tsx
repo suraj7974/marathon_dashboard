@@ -13,6 +13,7 @@ import AccommodationManagement from "@/components/viewvenue";
 import Influencers from "@/components/influencers";
 import TshirtInventory from "@/components/tshirt-inventory";
 import TshirtBulkSales from "@/components/tshirt-bulk-sales";
+import Reports from "@/components/reports";
 
 // import "./App.css";
 
@@ -64,6 +65,15 @@ function App() {
           element={
             <ProtectedRoute requiredRole="bulksales">
               <TshirtBulkSales />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/reports"
+          element={
+            <ProtectedRoute requiredRole="reports">
+              <Reports />
             </ProtectedRoute>
           }
         />
