@@ -47,8 +47,12 @@ const isFromBastar = (city: string): boolean => {
 
 const OpenCategoryVerification = () => {
   const [searchValue, setSearchValue] = useState("");
-  const [participant, setParticipant] = useState<ExtendedParticipant | null>(null);
-  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>([]);
+  const [participant, setParticipant] = useState<ExtendedParticipant | null>(
+    null,
+  );
+  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -68,33 +72,68 @@ const OpenCategoryVerification = () => {
     setNewBibNumber("");
 
     try {
-      let query = supabase
-        .schema("marathon")
-        .from("registrations_2026")
-        .select("*");
-
-      const trimmedValue = value.trim();
+      let data: ExtendedParticipant[] | null = null;
+      let error: any = null;
       let searchType = "";
+      const trimmedValue = value.trim();
 
       // Determine search type
       if (/^\d{10}$/.test(trimmedValue)) {
         // Mobile number (10 digits)
-        query = query.eq("mobile", trimmedValue);
         searchType = "Mobile Number";
+        const response = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("mobile", trimmedValue);
+        data = response.data;
+        error = response.error;
       } else if (/^\d+$/.test(trimmedValue)) {
-        // BIB Number (numeric, not 10 digits)
-        query = query.eq("bib_num", parseInt(trimmedValue, 10));
+        // Numeric value: could be BIB or Unique ID.
+        // First, try as BIB number.
         searchType = "BIB Number";
+        const bibResponse = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("bib_num", parseInt(trimmedValue, 10));
+
+        if (bibResponse.error) throw bibResponse.error;
+
+        if (bibResponse.data && bibResponse.data.length > 0) {
+          data = bibResponse.data;
+        } else {
+          // If no results as BIB, try as Unique ID.
+          searchType = "Unique ID";
+          const uidResponse = await supabase
+            .schema("marathon")
+            .from("registrations_2026")
+            .select("*")
+            .eq("identification_number", trimmedValue.toUpperCase());
+
+          if (uidResponse.error) throw uidResponse.error;
+
+          data = uidResponse.data;
+
+          // If no data is found after both searches, update the searchType for the error message
+          if (!data || data.length === 0) {
+            searchType = "BIB or Unique ID";
+          }
+        }
       } else {
-        // Unique ID (alphanumeric)
-        query = query.eq("identification_number", trimmedValue.toUpperCase());
+        // Alphanumeric Unique ID
         searchType = "Unique ID";
+        const response = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("identification_number", trimmedValue.toUpperCase());
+        data = response.data;
+        error = response.error;
       }
 
-      const { data, error: searchError } = await query;
-
-      if (searchError) {
-        throw searchError;
+      if (error) {
+        throw error;
       }
 
       if (!data || data.length === 0) {
@@ -103,7 +142,9 @@ const OpenCategoryVerification = () => {
         setParticipant(data[0]);
       } else {
         setMultipleResults(data);
-        setSuccessMessage(`Found ${data.length} participants. Please select one.`);
+        setSuccessMessage(
+          `Found ${data.length} participants. Please select one.`,
+        );
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -152,11 +193,14 @@ const OpenCategoryVerification = () => {
         });
 
       if (participant.bib_num) {
-         updateQuery = updateQuery.eq("bib_num", participant.bib_num);
+        updateQuery = updateQuery.eq("bib_num", participant.bib_num);
       } else {
-         updateQuery = updateQuery.eq("identification_number", participant.identification_number);
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
       }
-      
+
       const { error } = await updateQuery;
 
       if (error) throw error;
@@ -185,7 +229,7 @@ const OpenCategoryVerification = () => {
           name: `${participant.first_name} ${participant.last_name}`,
           payment_method: method,
           amount: getPaymentAmount(),
-        }
+        },
       );
     } catch (err) {
       setError("Failed to update payment status");
@@ -198,8 +242,8 @@ const OpenCategoryVerification = () => {
     if (!participant) return;
     // Check if bib_num is present before allowing status update (especially for bib)
     if (item === "bib" && !participant.bib_num) {
-        setError("Cannot mark Bib as received: No Bib Number assigned.");
-        return;
+      setError("Cannot mark Bib as received: No Bib Number assigned.");
+      return;
     }
 
     setUpdatingItem(item);
@@ -223,9 +267,10 @@ const OpenCategoryVerification = () => {
             p_xxl: size === "XXL" ? 1 : 0,
           };
 
-          const { data: decrementResult, error: decrementError } = await supabase
-            .schema("marathon")
-            .rpc("decrement_bulk_inventory", rpcParams);
+          const { data: decrementResult, error: decrementError } =
+            await supabase
+              .schema("marathon")
+              .rpc("decrement_bulk_inventory", rpcParams);
 
           if (decrementError) {
             console.error("Inventory decrement failed:", decrementError);
@@ -244,11 +289,14 @@ const OpenCategoryVerification = () => {
         .update(updateData);
 
       if (participant.bib_num) {
-         updateQuery = updateQuery.eq("bib_num", participant.bib_num);
+        updateQuery = updateQuery.eq("bib_num", participant.bib_num);
       } else {
-         updateQuery = updateQuery.eq("identification_number", participant.identification_number);
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
       }
-      
+
       const { error } = await updateQuery;
 
       if (error) throw error;
@@ -262,11 +310,15 @@ const OpenCategoryVerification = () => {
           : null,
       );
 
-      setSuccessMessage(`${item === "tshirt" ? "T-shirt" : "Bib"} marked as received`);
+      setSuccessMessage(
+        `${item === "tshirt" ? "T-shirt" : "Bib"} marked as received`,
+      );
 
       // Log item distribution
       logEvent(
-        item === "tshirt" ? LogEvents.TSHIRT_DISTRIBUTED : LogEvents.BIB_DISTRIBUTED,
+        item === "tshirt"
+          ? LogEvents.TSHIRT_DISTRIBUTED
+          : LogEvents.BIB_DISTRIBUTED,
         {
           category: "opencategory",
           participant_id: participant.identification_number,
@@ -274,7 +326,7 @@ const OpenCategoryVerification = () => {
           name: `${participant.first_name} ${participant.last_name}`,
           item_type: item,
           t_shirt_size: item === "tshirt" ? participant.t_shirt_size : null,
-        }
+        },
       );
     } catch (err) {
       console.error(`Error updating ${item} status:`, err);
@@ -289,8 +341,8 @@ const OpenCategoryVerification = () => {
 
     const bibNum = parseInt(newBibNumber, 10);
     if (isNaN(bibNum)) {
-        setError("Please enter a valid numeric BIB number.");
-        return;
+      setError("Please enter a valid numeric BIB number.");
+      return;
     }
 
     setAssigningBib(true);
@@ -298,33 +350,35 @@ const OpenCategoryVerification = () => {
     setSuccessMessage("");
 
     try {
-        const { error } = await supabase
-            .schema("marathon")
-            .from("registrations_2026")
-            .update({ bib_num: bibNum })
-            .eq("identification_number", participant.identification_number);
+      const { error } = await supabase
+        .schema("marathon")
+        .from("registrations_2026")
+        .update({ bib_num: bibNum })
+        .eq("identification_number", participant.identification_number);
 
-        if (error) throw error;
+      if (error) throw error;
 
-        setParticipant((prev) =>
-            prev ? { ...prev, bib_num: BigInt(bibNum) as unknown as BigInteger } : null
-        );
-        
-        setSuccessMessage(`BIB #${bibNum} assigned successfully.`);
-        setNewBibNumber("");
+      setParticipant((prev) =>
+        prev
+          ? { ...prev, bib_num: BigInt(bibNum) as unknown as BigInteger }
+          : null,
+      );
 
-        // Log BIB assignment
-        logEvent(LogEvents.BIB_ASSIGNED, {
-          category: "opencategory",
-          participant_id: participant.identification_number,
-          name: `${participant.first_name} ${participant.last_name}`,
-          assigned_bib: bibNum,
-        });
+      setSuccessMessage(`BIB #${bibNum} assigned successfully.`);
+      setNewBibNumber("");
+
+      // Log BIB assignment
+      logEvent(LogEvents.BIB_ASSIGNED, {
+        category: "opencategory",
+        participant_id: participant.identification_number,
+        name: `${participant.first_name} ${participant.last_name}`,
+        assigned_bib: bibNum,
+      });
     } catch (err) {
-        console.error("Error assigning BIB:", err);
-        setError("Failed to assign BIB number. It might be already in use.");
+      console.error("Error assigning BIB:", err);
+      setError("Failed to assign BIB number. It might be already in use.");
     } finally {
-        setAssigningBib(false);
+      setAssigningBib(false);
     }
   };
 
@@ -434,7 +488,11 @@ const OpenCategoryVerification = () => {
                 <div className="grid gap-4">
                   {multipleResults.map((result) => (
                     <div
-                      key={result.bib_num ? result.bib_num.toString() : result.identification_number}
+                      key={
+                        result.bib_num
+                          ? result.bib_num.toString()
+                          : result.identification_number
+                      }
                       className="bg-white p-4 rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
                     >
                       <div className="flex items-center gap-4">
@@ -447,10 +505,12 @@ const OpenCategoryVerification = () => {
                           </div>
                           <div className="text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                             <span className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" /> BIB: {result.bib_num?.toString() || "N/A"}
+                              <Tag className="w-3 h-3" /> BIB:{" "}
+                              {result.bib_num?.toString() || "N/A"}
                             </span>
                             <span className="flex items-center gap-1">
-                              <Trophy className="w-3 h-3" /> {result.race_category}
+                              <Trophy className="w-3 h-3" />{" "}
+                              {result.race_category}
                             </span>
                             <span className="flex items-center gap-1">
                               <MapPin className="w-3 h-3" /> {result.city}
@@ -485,8 +545,8 @@ const OpenCategoryVerification = () => {
                     </div>
                     <p className="text-amber-700 mb-4">
                       This participant is from{" "}
-                      <strong>{participant.city}</strong> (NPR/Bastar Region). Please direct them to the
-                      NPR/Bastar Verification counter.
+                      <strong>{participant.city}</strong> (NPR/Bastar Region).
+                      Please direct them to the NPR/Bastar Verification counter.
                     </p>
                     <div className="bg-white rounded p-4 border border-amber-200">
                       <div className="grid grid-cols-2 gap-4">
@@ -585,11 +645,12 @@ const OpenCategoryVerification = () => {
                                 >
                                   {participant.wants_tshirt ? "Yes" : "No"}
                                 </span>
-                                {participant.wants_tshirt && participant.t_shirt_size && (
-                                  <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                                    Size: {participant.t_shirt_size}
-                                  </span>
-                                )}
+                                {participant.wants_tshirt &&
+                                  participant.t_shirt_size && (
+                                    <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                      Size: {participant.t_shirt_size}
+                                    </span>
+                                  )}
                               </div>
                             </div>
                           </div>
@@ -602,9 +663,7 @@ const OpenCategoryVerification = () => {
                       {/* Left Column: Verification & Payment (Combined) */}
                       <div className="space-y-6">
                         <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border h-full">
-                          <h3 className="font-medium text-lg mb-4">
-                            Payment
-                          </h3>
+                          <h3 className="font-medium text-lg mb-4">Payment</h3>
 
                           <div className="grid grid-cols-1 gap-4">
                             {/* Payment Item */}
@@ -618,7 +677,9 @@ const OpenCategoryVerification = () => {
                                   <div>
                                     <div className="font-medium">Payment</div>
                                     <div className="text-sm text-gray-500">
-                                      {isPaymentComplete() ? "Completed" : `Due: Rs. ${getPaymentAmount()}`}
+                                      {isPaymentComplete()
+                                        ? "Completed"
+                                        : `Due: Rs. ${getPaymentAmount()}`}
                                     </div>
                                   </div>
                                 </div>
@@ -632,27 +693,34 @@ const OpenCategoryVerification = () => {
                                   ) : needsPayment() && !showPaymentMethods ? (
                                     <Button
                                       size="sm"
-                                      onClick={() => setShowPaymentMethods(true)}
+                                      onClick={() =>
+                                        setShowPaymentMethods(true)
+                                      }
                                       className="bg-green-600 hover:bg-green-700"
                                     >
                                       Take Payment
                                     </Button>
                                   ) : (
                                     <span className="text-xs text-gray-500 font-medium">
-                                      {participant.payment_status?.toUpperCase() || "PENDING"}
+                                      {participant.payment_status?.toUpperCase() ||
+                                        "PENDING"}
                                     </span>
                                   )}
                                 </div>
                               </div>
-                              
+
                               {/* Expanded Payment Methods */}
                               {showPaymentMethods && (
                                 <div className="pt-3 mt-1 border-t border-gray-200">
-                                  <p className="text-xs text-gray-500 mb-3">Select Method:</p>
+                                  <p className="text-xs text-gray-500 mb-3">
+                                    Select Method:
+                                  </p>
                                   <div className="flex flex-wrap gap-2">
                                     <Button
                                       size="sm"
-                                      onClick={() => handlePaymentAction("ONLINE")}
+                                      onClick={() =>
+                                        handlePaymentAction("ONLINE")
+                                      }
                                       disabled={processingPayment}
                                       className="bg-blue-600 hover:bg-blue-700 flex-1"
                                     >
@@ -661,7 +729,9 @@ const OpenCategoryVerification = () => {
                                     </Button>
                                     <Button
                                       size="sm"
-                                      onClick={() => handlePaymentAction("CASH")}
+                                      onClick={() =>
+                                        handlePaymentAction("CASH")
+                                      }
                                       disabled={processingPayment}
                                       className="bg-green-600 hover:bg-green-700 flex-1"
                                     >
@@ -671,7 +741,9 @@ const OpenCategoryVerification = () => {
                                     <Button
                                       size="sm"
                                       variant="outline"
-                                      onClick={() => setShowPaymentMethods(false)}
+                                      onClick={() =>
+                                        setShowPaymentMethods(false)
+                                      }
                                       disabled={processingPayment}
                                       className="flex-shrink-0"
                                     >
@@ -691,7 +763,7 @@ const OpenCategoryVerification = () => {
                           <h3 className="font-medium text-lg mb-4">
                             Tshirt and BIB
                           </h3>
-                          
+
                           <div className="grid grid-cols-1 gap-4">
                             {/* T-Shirt Distribution */}
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
@@ -704,7 +776,8 @@ const OpenCategoryVerification = () => {
                                   <div className="text-sm text-gray-500">
                                     {participant.wants_tshirt ? (
                                       <span className="font-medium text-purple-700">
-                                        Size: {participant.t_shirt_size || "N/A"}
+                                        Size:{" "}
+                                        {participant.t_shirt_size || "N/A"}
                                       </span>
                                     ) : (
                                       "Not Required"
@@ -712,7 +785,7 @@ const OpenCategoryVerification = () => {
                                   </div>
                                 </div>
                               </div>
-                              
+
                               <div>
                                 {participant.wants_tshirt ? (
                                   participant.received_tshirt ? (
@@ -723,19 +796,28 @@ const OpenCategoryVerification = () => {
                                   ) : (
                                     <Button
                                       size="sm"
-                                      onClick={() => handleUpdateItemStatus("tshirt")}
-                                      disabled={!canDistributeItems() || updatingItem === "tshirt"}
+                                      onClick={() =>
+                                        handleUpdateItemStatus("tshirt")
+                                      }
+                                      disabled={
+                                        !canDistributeItems() ||
+                                        updatingItem === "tshirt"
+                                      }
                                       className="bg-purple-600 hover:bg-purple-700"
                                     >
-                                      {updatingItem === "tshirt" ? "Updating..." : "Mark Received"}
+                                      {updatingItem === "tshirt"
+                                        ? "Updating..."
+                                        : "Mark Received"}
                                     </Button>
                                   )
                                 ) : (
-                                  <span className="text-xs text-gray-400">Skipped</span>
+                                  <span className="text-xs text-gray-400">
+                                    Skipped
+                                  </span>
                                 )}
                               </div>
                             </div>
-                            
+
                             {/* Bib Distribution */}
                             <div className="flex flex-col gap-4 p-4 border rounded-lg bg-gray-50">
                               <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -744,13 +826,17 @@ const OpenCategoryVerification = () => {
                                     <Tag className="w-5 h-5 text-orange-600" />
                                   </div>
                                   <div>
-                                    <div className="font-medium">Bib Number</div>
+                                    <div className="font-medium">
+                                      Bib Number
+                                    </div>
                                     <div className="text-sm font-medium text-orange-700">
-                                      {participant.bib_num ? `#${participant.bib_num}` : "Not Assigned"}
+                                      {participant.bib_num
+                                        ? `#${participant.bib_num}`
+                                        : "Not Assigned"}
                                     </div>
                                   </div>
                                 </div>
-                                
+
                                 <div>
                                   {participant.received_bib ? (
                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
@@ -760,40 +846,52 @@ const OpenCategoryVerification = () => {
                                   ) : (
                                     <Button
                                       size="sm"
-                                      onClick={() => handleUpdateItemStatus("bib")}
-                                      disabled={!canDistributeItems() || !participant.bib_num || updatingItem === "bib"}
+                                      onClick={() =>
+                                        handleUpdateItemStatus("bib")
+                                      }
+                                      disabled={
+                                        !canDistributeItems() ||
+                                        !participant.bib_num ||
+                                        updatingItem === "bib"
+                                      }
                                       className="bg-orange-600 hover:bg-orange-700"
                                     >
-                                      {updatingItem === "bib" ? "Updating..." : "Mark Received"}
+                                      {updatingItem === "bib"
+                                        ? "Updating..."
+                                        : "Mark Received"}
                                     </Button>
                                   )}
                                 </div>
                               </div>
-                              
+
                               {/* Assign BIB Input - Only if no bib assigned */}
                               {!participant.bib_num && canDistributeItems() && (
                                 <div className="pt-3 mt-1 border-t border-gray-200">
-                                    <div className="flex items-center gap-2">
-                                        <Input 
-                                            placeholder="Enter BIB #" 
-                                            className="h-9" 
-                                            value={newBibNumber}
-                                            onChange={(e) => setNewBibNumber(e.target.value.replace(/\D/g, ''))}
-                                        />
-                                        <Button 
-                                            size="sm" 
-                                            className="bg-blue-600 hover:bg-blue-700 shrink-0"
-                                            onClick={handleAssignBib}
-                                            disabled={assigningBib || !newBibNumber}
-                                        >
-                                            <Plus className="w-4 h-4 mr-1" />
-                                            Assign
-                                        </Button>
-                                    </div>
+                                  <div className="flex items-center gap-2">
+                                    <Input
+                                      placeholder="Enter BIB #"
+                                      className="h-9"
+                                      value={newBibNumber}
+                                      onChange={(e) =>
+                                        setNewBibNumber(
+                                          e.target.value.replace(/\D/g, ""),
+                                        )
+                                      }
+                                    />
+                                    <Button
+                                      size="sm"
+                                      className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                                      onClick={handleAssignBib}
+                                      disabled={assigningBib || !newBibNumber}
+                                    >
+                                      <Plus className="w-4 h-4 mr-1" />
+                                      Assign
+                                    </Button>
+                                  </div>
                                 </div>
                               )}
                             </div>
-                            
+
                             {!canDistributeItems() && (
                               <div className="text-xs text-center text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
                                 Complete payment to enable distribution

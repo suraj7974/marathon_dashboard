@@ -93,33 +93,68 @@ const PaymentAndVerification = () => {
     setNewBibNumber("");
 
     try {
-      let query = supabase
-        .schema("marathon")
-        .from("registrations_2026")
-        .select("*");
-
-      const trimmedValue = value.trim();
+      let data: ExtendedParticipant[] | null = null;
+      let error: any = null;
       let searchType = "";
+      const trimmedValue = value.trim();
 
       // Determine search type
       if (/^\d{10}$/.test(trimmedValue)) {
         // Mobile number (10 digits)
-        query = query.eq("mobile", trimmedValue);
         searchType = "Mobile Number";
+        const response = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("mobile", trimmedValue);
+        data = response.data;
+        error = response.error;
       } else if (/^\d+$/.test(trimmedValue)) {
-        // BIB Number (numeric, not 10 digits)
-        query = query.eq("bib_num", parseInt(trimmedValue, 10));
+        // Numeric value: could be BIB or Unique ID.
+        // First, try as BIB number.
         searchType = "BIB Number";
+        const bibResponse = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("bib_num", parseInt(trimmedValue, 10));
+
+        if (bibResponse.error) throw bibResponse.error;
+
+        if (bibResponse.data && bibResponse.data.length > 0) {
+          data = bibResponse.data;
+        } else {
+          // If no results as BIB, try as Unique ID.
+          searchType = "Unique ID";
+          const uidResponse = await supabase
+            .schema("marathon")
+            .from("registrations_2026")
+            .select("*")
+            .eq("identification_number", trimmedValue.toUpperCase());
+
+          if (uidResponse.error) throw uidResponse.error;
+
+          data = uidResponse.data;
+
+          // If no data is found after both searches, update the searchType for the error message
+          if (!data || data.length === 0) {
+            searchType = "BIB or Unique ID";
+          }
+        }
       } else {
-        // Unique ID (alphanumeric)
-        query = query.eq("identification_number", trimmedValue.toUpperCase());
+        // Alphanumeric Unique ID
         searchType = "Unique ID";
+        const response = await supabase
+          .schema("marathon")
+          .from("registrations_2026")
+          .select("*")
+          .eq("identification_number", trimmedValue.toUpperCase());
+        data = response.data;
+        error = response.error;
       }
 
-      const { data, error: searchError } = await query;
-
-      if (searchError) {
-        throw searchError;
+      if (error) {
+        throw error;
       }
 
       if (!data || data.length === 0) {
@@ -319,7 +354,7 @@ const PaymentAndVerification = () => {
           name: `${participant.first_name} ${participant.last_name}`,
           payment_method: method,
           amount: getPaymentAmount(),
-        }
+        },
       );
     } catch (err) {
       setError("Failed to update payment status");
@@ -406,7 +441,9 @@ const PaymentAndVerification = () => {
 
       // Log item distribution
       logEvent(
-        item === "tshirt" ? LogEvents.TSHIRT_DISTRIBUTED : LogEvents.BIB_DISTRIBUTED,
+        item === "tshirt"
+          ? LogEvents.TSHIRT_DISTRIBUTED
+          : LogEvents.BIB_DISTRIBUTED,
         {
           category: "nprbastarcategory",
           participant_id: participant.identification_number,
@@ -414,7 +451,7 @@ const PaymentAndVerification = () => {
           name: `${participant.first_name} ${participant.last_name}`,
           item_type: item,
           t_shirt_size: item === "tshirt" ? participant.t_shirt_size : null,
-        }
+        },
       );
     } catch (err) {
       console.error(`Error updating ${item} status:`, err);
