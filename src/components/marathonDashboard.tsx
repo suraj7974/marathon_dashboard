@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../lib/supabase";
 import {
   LineChart,
   Line,
@@ -13,14 +13,8 @@ import {
   Bar,
 } from "recharts";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const SCHEMA = "bastar_marathon";
 const TABLE = "registrations";
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  db: { schema: SCHEMA },
-});
 
 const fmt = (n: number | null | undefined) => (n ?? 0).toLocaleString();
 
@@ -71,6 +65,7 @@ export default function MarathonDashboard() {
       const pageSize = 1000;
       while (true) {
         const { data, error } = await supabase
+          .schema(SCHEMA)
           .from(TABLE)
           .select(
             "city, state, wants_tshirt, t_shirt_size, payment_status, category, gender, created_at",
