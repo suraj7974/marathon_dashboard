@@ -14,6 +14,7 @@ import Influencers from "@/components/influencers";
 import TshirtInventory from "@/components/tshirt-inventory";
 import TshirtBulkSales from "@/components/tshirt-bulk-sales";
 import Reports from "@/components/reports";
+import MarathonDashboard from "./components/marathonDashboard";
 
 // import "./App.css";
 
@@ -77,6 +78,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/registrationlogs" element={<MarathonDashboard />} />
 
         <Route path="/view-details" element={<ViewDetails />} />
 
