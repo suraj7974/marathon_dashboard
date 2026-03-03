@@ -91,8 +91,11 @@ export default function MarathonDashboard() {
   // ── Derived stats ──────────────────────────────────────────────────────────
   const total = rows.length;
   const paid = rows.filter((r) => r.payment_status === "DONE").length;
-  const offline = rows.filter((r) => r.payment_status === "OFFLINE").length;
+  // const offline = rows.filter((r) => r.payment_status === "OFFLINE").length;
   const tshirtWanted = rows.filter((r) => r.wants_tshirt).length;
+  const tshirtSuccess = rows.filter(
+    (r) => r.wants_tshirt && r.payment_status === "DONE",
+  ).length;
 
   // City breakdown
   const cityMap: Record<
@@ -100,6 +103,7 @@ export default function MarathonDashboard() {
     {
       city: string;
       tshirt: number;
+      tshirt_success: number;
       total: number;
       paid: number;
       offline: number;
@@ -108,39 +112,67 @@ export default function MarathonDashboard() {
   rows.forEach((r) => {
     const c = r.city || "Unknown";
     if (!cityMap[c])
-      cityMap[c] = { city: c, tshirt: 0, total: 0, paid: 0, offline: 0 };
+      cityMap[c] = {
+        city: c,
+        tshirt: 0,
+        tshirt_success: 0,
+        total: 0,
+        paid: 0,
+        offline: 0,
+      };
     cityMap[c].total += 1;
-    if (r.wants_tshirt) cityMap[c].tshirt += 1;
+    if (r.wants_tshirt) {
+      cityMap[c].tshirt += 1;
+      if (r.payment_status === "DONE") {
+        cityMap[c].tshirt_success += 1;
+      }
+    }
     if (r.payment_status === "DONE") cityMap[c].paid += 1;
     if (r.payment_status === "OFFLINE") cityMap[c].offline += 1;
   });
   const cityRows = Object.values(cityMap).sort((a, b) => b.total - a.total);
 
-  // T-shirt size breakdown (only for wants_tshirt = true)
+  // T-shirt size breakdown
   const sizeOrder = ["S", "M", "L", "XL", "XXL"];
-  const sizeMap: Record<string, number> = {};
+  const sizeMap: Record<string, { tried: number; success: number }> = {};
   rows.forEach((r) => {
     if (!r.wants_tshirt) return;
     const s = r.t_shirt_size || "Unknown";
-    sizeMap[s] = (sizeMap[s] || 0) + 1;
+    if (!sizeMap[s]) sizeMap[s] = { tried: 0, success: 0 };
+    sizeMap[s].tried += 1;
+    if (r.payment_status === "DONE") {
+      sizeMap[s].success += 1;
+    }
   });
-  const sizeData = sizeOrder.map((s) => ({ size: s, count: sizeMap[s] || 0 }));
+  const sizeData = sizeOrder.map((s) => ({
+    size: s,
+    tried: sizeMap[s]?.tried || 0,
+    success: sizeMap[s]?.success || 0,
+  }));
 
   // Category breakdown
-  const catMap: Record<string, number> = {};
+  const catMap: Record<string, { tried: number; success: number }> = {};
   rows.forEach((r) => {
     const c = r.category || "Unknown";
-    catMap[c] = (catMap[c] || 0) + 1;
+    if (!catMap[c]) catMap[c] = { tried: 0, success: 0 };
+    catMap[c].tried += 1;
+    if (r.payment_status === "DONE") {
+      catMap[c].success += 1;
+    }
   });
   const catData = Object.entries(catMap)
-    .sort((a, b) => b[1] - a[1])
-    .map(([name, count]) => ({ name, count }));
+    .sort((a, b) => b[1].tried - a[1].tried)
+    .map(([name, { tried, success }]) => ({ name, tried, success }));
 
   // Gender breakdown
-  const genderMap: Record<string, number> = {};
+  const genderMap: Record<string, { tried: number; success: number }> = {};
   rows.forEach((r) => {
     const g = r.gender || "Unknown";
-    genderMap[g] = (genderMap[g] || 0) + 1;
+    if (!genderMap[g]) genderMap[g] = { tried: 0, success: 0 };
+    genderMap[g].tried += 1;
+    if (r.payment_status === "DONE") {
+      genderMap[g].success += 1;
+    }
   });
 
   // Daily registration trend
@@ -199,13 +231,13 @@ export default function MarathonDashboard() {
       {/* Stat Cards */}
       <div className="flex gap-3.5 flex-wrap mb-4">
         <StatCard
-          label="Total Registrations Tried"
+          label="Registrations (Tried)"
           value={total}
           color="text-black"
           bg="bg-black/10"
         />
         <StatCard
-          label="Successfull Registrations"
+          label="Registrations (Success)"
           value={paid}
           color="text-green-600"
           bg="bg-green-100"
@@ -217,10 +249,16 @@ export default function MarathonDashboard() {
           bg="bg-orange-100"
         />*/}
         <StatCard
-          label="T-Shirt Orders"
+          label="T-Shirt Orders (Tried)"
           value={tshirtWanted}
           color="text-blue-600"
           bg="bg-blue-100"
+        />
+        <StatCard
+          label="T-Shirt Orders (Success)"
+          value={tshirtSuccess}
+          color="text-green-600"
+          bg="bg-green-100"
         />
       </div>
 
@@ -235,7 +273,7 @@ export default function MarathonDashboard() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  {["City", "Tried", "Success", "T-Shirt"].map((h) => (
+                  {["City", "Registrations", "T-Shirts"].map((h) => (
                     <th
                       key={h}
                       className="sticky top-0 bg-white z-10 pb-2.5 font-semibold text-gray-500 text-xs uppercase tracking-wide border-b-2 border-gray-200"
@@ -250,18 +288,21 @@ export default function MarathonDashboard() {
                 {cityRows.map((r, i) => (
                   <tr
                     key={r.city}
-                    className={`border-t border-gray-200 ${i % 2 === 0 ? "" : "bg-gray-50"}`}
+                    className={`border-t border-gray-200 ${
+                      i % 2 === 0 ? "" : "bg-gray-50"
+                    }`}
                   >
                     <td className="py-2 font-medium">{r.city}</td>
-
-                    <td className="text-right font-bold">{fmt(r.total)}</td>
-                    <td className="text-right text-green-600">{fmt(r.paid)}</td>
-                    <td className="text-right text-blue-600">
-                      {fmt(r.tshirt)}
+                    <td className="text-right font-bold">
+                      {fmt(r.total)}{" "}
+                      <span className="text-green-600">({fmt(r.paid)})</span>
                     </td>
-                    {/*<td className="text-right text-orange-600 pr-1">
-                      {fmt(r.offline)}
-                    </td>*/}
+                    <td className="text-right text-blue-600">
+                      {fmt(r.tshirt)}{" "}
+                      <span className="text-green-600">
+                        ({fmt(r.tshirt_success)})
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -343,11 +384,18 @@ export default function MarathonDashboard() {
                   fontSize: 12,
                 }}
               />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar
-                dataKey="count"
+                dataKey="tried"
                 fill="#2563eb"
                 radius={[6, 6, 0, 0]}
-                name="Count"
+                name="Tried"
+              />
+              <Bar
+                dataKey="success"
+                fill="#16a34a"
+                radius={[6, 6, 0, 0]}
+                name="Success"
               />
             </BarChart>
           </ResponsiveContainer>
@@ -365,7 +413,10 @@ export default function MarathonDashboard() {
                   Category
                 </th>
                 <th className="text-right text-gray-500 text-xs uppercase pb-2">
-                  Count
+                  Tried
+                </th>
+                <th className="text-right text-gray-500 text-xs uppercase pb-2">
+                  Success
                 </th>
               </tr>
             </thead>
@@ -375,7 +426,12 @@ export default function MarathonDashboard() {
                   <td className="py-2 font-medium">{r.name}</td>
                   <td className="text-right">
                     <span className="bg-blue-100 text-blue-600 rounded-md px-2 py-0.5 font-semibold text-xs">
-                      {fmt(r.count)}
+                      {fmt(r.tried)}
+                    </span>
+                  </td>
+                  <td className="text-right">
+                    <span className="bg-green-100 text-green-600 rounded-md px-2 py-0.5 font-semibold text-xs">
+                      {fmt(r.success)}
                     </span>
                   </td>
                 </tr>
@@ -390,8 +446,8 @@ export default function MarathonDashboard() {
             By Gender
           </p>
           <div className="flex flex-col gap-3 mt-1">
-            {Object.entries(genderMap).map(([g, count]) => {
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+            {Object.entries(genderMap).map(([g, { tried, success }]) => {
+              const pct = tried > 0 ? Math.round((success / tried) * 100) : 0;
               const colorClass =
                 g === "Male"
                   ? "bg-blue-600"
@@ -403,7 +459,7 @@ export default function MarathonDashboard() {
                   <div className="flex justify-between mb-1 text-sm">
                     <span className="font-medium">{g}</span>
                     <span className="text-gray-500">
-                      {fmt(count)} ({pct}%)
+                      {fmt(success)} / {fmt(tried)} ({pct}%)
                     </span>
                   </div>
                   <div className="h-2 bg-gray-100 rounded-full">
