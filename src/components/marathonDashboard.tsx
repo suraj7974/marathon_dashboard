@@ -199,23 +199,23 @@ export default function MarathonDashboard() {
       {/* Stat Cards */}
       <div className="flex gap-3.5 flex-wrap mb-4">
         <StatCard
-          label="Total Registrations"
+          label="Total Registrations Tried"
           value={total}
           color="text-black"
           bg="bg-black/10"
         />
         <StatCard
-          label="Online Registrations"
+          label="Successfull Registrations"
           value={paid}
           color="text-green-600"
           bg="bg-green-100"
         />
-        <StatCard
+        {/*<StatCard
           label="Offline Registrations"
           value={offline}
           color="text-orange-600"
           bg="bg-orange-100"
-        />
+        />*/}
         <StatCard
           label="T-Shirt Orders"
           value={tshirtWanted}
@@ -235,7 +235,7 @@ export default function MarathonDashboard() {
             <table className="w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  {["City", "T-Shirt", "Total", "Paid", "Offline"].map((h) => (
+                  {["City", "Tried", "Success", "T-Shirt"].map((h) => (
                     <th
                       key={h}
                       className="sticky top-0 bg-white z-10 pb-2.5 font-semibold text-gray-500 text-xs uppercase tracking-wide border-b-2 border-gray-200"
@@ -253,14 +253,15 @@ export default function MarathonDashboard() {
                     className={`border-t border-gray-200 ${i % 2 === 0 ? "" : "bg-gray-50"}`}
                   >
                     <td className="py-2 font-medium">{r.city}</td>
+
+                    <td className="text-right font-bold">{fmt(r.total)}</td>
+                    <td className="text-right text-green-600">{fmt(r.paid)}</td>
                     <td className="text-right text-blue-600">
                       {fmt(r.tshirt)}
                     </td>
-                    <td className="text-right font-bold">{fmt(r.total)}</td>
-                    <td className="text-right text-green-600">{fmt(r.paid)}</td>
-                    <td className="text-right text-orange-600 pr-1">
+                    {/*<td className="text-right text-orange-600 pr-1">
                       {fmt(r.offline)}
-                    </td>
+                    </td>*/}
                   </tr>
                 ))}
               </tbody>
@@ -302,14 +303,14 @@ export default function MarathonDashboard() {
                 dot={false}
                 name="Online (DONE)"
               />
-              <Line
+              {/*<Line
                 type="monotone"
                 dataKey="OFFLINE"
                 stroke="#ea580c"
                 strokeWidth={2}
                 dot={false}
                 name="Offline"
-              />
+              />*/}
             </LineChart>
           </ResponsiveContainer>
         </div>
