@@ -211,7 +211,7 @@ const Login = () => {
             <span className="text-2xl font-bold text-white">AM</span>
           </div>
           <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-            Abujhmaad Marathon 2026
+            Bastar Marathon 2026
           </CardTitle>
           <p className="text-sm text-gray-500">Dashboard Access Portal</p>
         </CardHeader>

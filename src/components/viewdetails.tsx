@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Search, User, CreditCard, Trophy, MapPin, FileCheck, Shield, AlertTriangle, Users, Building, Phone, Tag, Check, X, Calendar } from "lucide-react";
+import { Search, User, CreditCard, Trophy, FileCheck, Shield, Users, Building, Phone, Tag, Check, X, Calendar } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import type { Participant } from "../types/participant";
 import { ParticipantDetailItem } from "./participant-detail-item";
@@ -13,20 +13,21 @@ const ViewDetails = () => {
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [verifying, setVerifying] = useState(false);
 
   const fetchParticipantDetails = async (input: string) => {
     setLoading(true);
     setError("");
 
     try {
-      // First try to search by bib_num if input is numeric (primary search)
+      // First try to search by bib_number if input is numeric (primary search)
       if (/^\d+$/.test(input)) {
         const bibNumber = parseInt(input, 10);
         const { data: bibData, error: bibError } = await supabase
-          .schema("marathon")
-          .from("registrations_2026")
+          .schema("bastar_marathon")
+          .from("registrations")
           .select("*")
-          .eq("bib_num", bibNumber)
+          .eq("bib_number", bibNumber)
           .maybeSingle();
 
         if (bibError) throw bibError;
@@ -39,8 +40,8 @@ const ViewDetails = () => {
 
       // If no results by BIB or input is not numeric, try to search by identification_number (secondary)
       const { data: idData } = await supabase
-        .schema("marathon")
-        .from("registrations_2026")
+        .schema("bastar_marathon")
+        .from("registrations")
         .select("*")
         .eq("identification_number", input.toUpperCase())
         .maybeSingle();
@@ -78,6 +79,27 @@ const ViewDetails = () => {
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       handleSearch();
+    }
+  };
+
+  const handleVerifyId = async () => {
+    if (!participant?.identification_number) return;
+    setVerifying(true);
+    try {
+      const { error: updateError } = await supabase
+        .schema("bastar_marathon")
+        .from("registrations")
+        .update({ govt_id_verified: true })
+        .eq("identification_number", participant.identification_number);
+
+      if (updateError) throw updateError;
+
+      setParticipant({ ...participant, govt_id_verified: true });
+    } catch (err) {
+      console.error("Verify error:", err);
+      setError("Failed to mark ID as verified");
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -140,9 +162,9 @@ const ViewDetails = () => {
             {participant && (
               <div className="bg-white rounded-lg p-4 sm:p-6 md:p-8 shadow-sm border mx-4 sm:mx-8 md:mx-16 lg:px-32">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-x-12 lg:gap-x-24">
-                  <ParticipantDetailItem icon={User} label="Name" value={`${participant.first_name} ${participant.last_name}`} iconColor="text-blue-500" />
+                  <ParticipantDetailItem icon={User} label="Name" value={participant.full_name ?? ""} iconColor="text-blue-500" />
 
-                  <ParticipantDetailItem icon={Phone} label="Mobile" value={participant.mobile} iconColor="text-green-500" />
+                  <ParticipantDetailItem icon={Phone} label="Phone" value={participant.phone ?? ""} iconColor="text-green-500" />
 
                   <div className="flex items-start gap-3">
                     <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
@@ -160,7 +182,7 @@ const ViewDetails = () => {
                     </div>
                   </div>
 
-                  <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.race_category || "10KM"} iconColor="text-indigo-500" />
+                  <ParticipantDetailItem icon={Trophy} label="Race Category" value={participant.category || "10KM"} iconColor="text-indigo-500" />
                   <ParticipantDetailItem icon={Calendar} label="Date of Birth" value={formatDate(participant.date_of_birth)} iconColor="text-green-500" />
 
                   <ParticipantDetailItem icon={Users} label="Gender" value={participant.gender} iconColor="text-purple-500" />
@@ -173,9 +195,9 @@ const ViewDetails = () => {
                     <div className="flex-1">
                       <div className="text-sm text-gray-500">Bib Number</div>
                       <div className="mt-1">
-                        {participant.bib_num ? (
+                        {participant.bib_number ? (
                           <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                            #{participant.bib_num.toString()}
+                            #{participant.bib_number.toString()}
                           </span>
                         ) : (
                           <span className="inline-flex items-center text-gray-600">
@@ -242,36 +264,30 @@ const ViewDetails = () => {
                     </div>
                   </div>
 
-                  <ParticipantDetailItem
-                    icon={MapPin}
-                    label="From Narayanpur"
-                    value={participant.is_from_narayanpur ? "Yes" : "No"}
-                    iconColor="text-orange-500"
-                  />
-
-                  <div className="flex flex-col gap-2">
-                    <ParticipantDetailItem
-                      icon={FileCheck}
-                      label="Government ID"
-                      value={participant.govt_id}
-                      iconColor="text-violet-500"
-                      emptyMessage="No ID"
-                    />
-                    {participant.govt_id && (
-                      <div className="flex items-center gap-2">
+                  {/* ID Verification */}
+                  <div className="flex items-start gap-3">
+                    <FileCheck className="w-6 h-6 text-violet-500 mt-1 shrink-0" />
+                    <div className="flex-1">
+                      <div className="text-sm text-gray-500">ID Verification</div>
+                      <div className="mt-1">
                         {participant.govt_id_verified ? (
                           <div className="flex items-center text-green-600 gap-2">
                             <Shield className="w-4 h-4" />
-                            <span className="text-sm">Verified</span>
+                            <span className="text-sm font-medium">Verified</span>
                           </div>
                         ) : (
-                          <div className="flex items-center text-amber-600 gap-2">
-                            <AlertTriangle className="w-4 h-4" />
-                            <span className="text-sm">Not verified</span>
-                          </div>
+                          <Button
+                            size="sm"
+                            onClick={handleVerifyId}
+                            disabled={verifying}
+                            className="bg-amber-500 hover:bg-amber-600 text-white"
+                          >
+                            <Shield className="w-4 h-4 mr-1" />
+                            {verifying ? "Verifying..." : "Mark as Verified"}
+                          </Button>
                         )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               </div>

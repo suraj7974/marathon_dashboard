@@ -41,10 +41,9 @@ const AccommodationManagement = () => {
       setFilteredParticipants(
         participants.filter(
           (p) =>
-            p.identification_number.toLowerCase().includes(query) ||
-            p.first_name.toLowerCase().includes(query) ||
-            p.last_name.toLowerCase().includes(query) ||
-            p.mobile.includes(query)
+            (p.identification_number ?? "").toLowerCase().includes(query) ||
+            (p.full_name ?? "").toLowerCase().includes(query) ||
+            (p.phone ?? "").includes(query)
         )
       );
     }
@@ -82,12 +81,13 @@ const AccommodationManagement = () => {
 
     try {
       const { data, error: participantsError } = await supabase
+        .schema("bastar_marathon")
         .from("registrations")
         .select("*")
         .eq("accommodation_venue", venue)
         .ilike("gender", gender)
         .eq("accommodation_allocated", true)
-        .order("first_name");
+        .order("full_name");
 
       if (participantsError) throw participantsError;
       console.log(data);
@@ -133,16 +133,16 @@ const AccommodationManagement = () => {
   const exportToCSV = () => {
     if (filteredParticipants.length === 0) return;
 
-    const headers = ["ID Number", "Name", "Mobile", "Gender", "City", "State", "Race Category"];
+    const headers = ["ID Number", "Name", "Phone", "Gender", "City", "State", "Race Category"];
 
     const csvData = filteredParticipants.map((p) => [
-      p.identification_number,
-      `${p.first_name} ${p.last_name}`,
-      p.mobile,
-      p.gender,
+      p.identification_number ?? "",
+      p.full_name ?? "",
+      p.phone ?? "",
+      p.gender ?? "",
       p.city || "N/A",
       p.state || "N/A",
-      p.race_category || "N/A",
+      p.category || "N/A",
     ]);
 
     // Add headers as the first row
@@ -239,7 +239,7 @@ const AccommodationManagement = () => {
                   </h3>
                   <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
                     <div className="relative w-full sm:w-64">
-                      <Input type="text" placeholder="Search by ID, name or mobile" value={searchQuery} onChange={handleSearchChange} className="pr-8" />
+                      <Input type="text" placeholder="Search by ID, name or phone" value={searchQuery} onChange={handleSearchChange} className="pr-8" />
                       {searchQuery && (
                         <button className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600" onClick={clearSearch}>
                           <X className="h-4 w-4" />
@@ -273,7 +273,7 @@ const AccommodationManagement = () => {
                           <TableRow>
                             <TableHead>ID Number</TableHead>
                             <TableHead>Name</TableHead>
-                            <TableHead>Mobile</TableHead>
+                            <TableHead>Phone</TableHead>
                             <TableHead>City</TableHead>
                             <TableHead>State</TableHead>
                             <TableHead>Race Category</TableHead>
@@ -283,11 +283,11 @@ const AccommodationManagement = () => {
                           {filteredParticipants.map((participant) => (
                             <TableRow key={participant.identification_number}>
                               <TableCell className="font-medium">{participant.identification_number}</TableCell>
-                              <TableCell>{`${participant.first_name} ${participant.last_name}`}</TableCell>
-                              <TableCell>{participant.mobile}</TableCell>
+                              <TableCell>{participant.full_name ?? ""}</TableCell>
+                              <TableCell>{participant.phone ?? ""}</TableCell>
                               <TableCell>{participant.city || "N/A"}</TableCell>
                               <TableCell>{participant.state || "N/A"}</TableCell>
-                              <TableCell>{participant.race_category || "N/A"}</TableCell>
+                              <TableCell>{participant.category || "N/A"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>

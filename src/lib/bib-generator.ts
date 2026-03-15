@@ -1,3 +1,9 @@
+/**
+ * @deprecated This module is NOT used for Bastar Marathon.
+ * BIB numbers are now assigned manually via the input box in openCategory/nprBastarCategory.
+ * Validation is handled by bib-validator.ts.
+ * This file is retained for reference only.
+ */
 import { supabase } from "./supabase";
 
 // Define BIB number ranges for each category
