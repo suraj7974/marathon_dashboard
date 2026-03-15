@@ -48,7 +48,7 @@ const TshirtBulkSales = () => {
     try {
       // Fetch inventory
       const { data: invData, error: invError } = await supabase
-        .schema("marathon")
+        .schema("bastar_marathon")
         .from("tshirt_inventory")
         .select("size, current_stock");
 
@@ -118,7 +118,7 @@ const TshirtBulkSales = () => {
     try {
       // First, try to decrement inventory using the RPC function
       const { data: decrementResult, error: decrementError } = await supabase
-        .schema("marathon")
+        .schema("bastar_marathon")
         .rpc("decrement_bulk_inventory", {
           p_s: quantities.S,
           p_m: quantities.M,
@@ -134,7 +134,7 @@ const TshirtBulkSales = () => {
         for (const size of SIZES) {
           if (quantities[size] > 0) {
             const { error: updateError } = await supabase
-              .schema("marathon")
+              .schema("bastar_marathon")
               .from("tshirt_inventory")
               .update({
                 current_stock: getStock(size) - quantities[size],
@@ -153,7 +153,7 @@ const TshirtBulkSales = () => {
 
       // Create the sale record
       const { error: saleError } = await supabase
-        .schema("marathon")
+        .schema("bastar_marathon")
         .from("tshirt_bulk_sales")
         .insert({
           buyer_name: buyerName.trim(),

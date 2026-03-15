@@ -248,7 +248,7 @@ const OpenCategoryVerification = () => {
           };
 
           const { data: decrementResult, error: decrementError } = await supabase
-            .schema("marathon")
+            .schema("bastar_marathon")
             .rpc("decrement_bulk_inventory", rpcParams);
 
           if (decrementError) {

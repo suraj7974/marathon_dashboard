@@ -51,7 +51,7 @@ const TshirtInventory = () => {
 
     try {
       const { data, error: fetchError } = await supabase
-        .schema("marathon")
+        .schema("bastar_marathon")
         .from("tshirt_inventory")
         .select("*")
         .order("id");
@@ -92,7 +92,7 @@ const TshirtInventory = () => {
         const values = editValues[size];
         if (values) {
           const { error: updateError } = await supabase
-            .schema("marathon")
+            .schema("bastar_marathon")
             .from("tshirt_inventory")
             .update({
               initial_stock: values.initial,
@@ -138,7 +138,7 @@ const TshirtInventory = () => {
           const item = inventory.find((i) => i.size === size);
           if (item) {
             const { error: updateError } = await supabase
-              .schema("marathon")
+              .schema("bastar_marathon")
               .from("tshirt_inventory")
               .update({
                 initial_stock: item.initial_stock + addQty,
