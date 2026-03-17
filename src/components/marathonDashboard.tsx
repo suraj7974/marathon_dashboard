@@ -50,6 +50,8 @@ type RegistrationRow = {
   category: string | null;
   gender: string | null;
   created_at: string | null;
+  date_of_birth: string | null;
+  wants_stay: boolean | null;
 };
 
 export default function MarathonDashboard() {
@@ -68,7 +70,7 @@ export default function MarathonDashboard() {
           .schema(SCHEMA)
           .from(TABLE)
           .select(
-            "city, state, wants_tshirt, t_shirt_size, payment_status, category, gender, created_at",
+            "city, state, wants_tshirt, t_shirt_size, payment_status, category, gender, created_at, date_of_birth, wants_stay",
           )
           .range(from, from + pageSize - 1);
         if (error) {
@@ -91,11 +93,114 @@ export default function MarathonDashboard() {
   // ── Derived stats ──────────────────────────────────────────────────────────
   const total = rows.length;
   const paid = rows.filter((r) => r.payment_status === "DONE").length;
-  // const offline = rows.filter((r) => r.payment_status === "OFFLINE").length;
   const tshirtWanted = rows.filter((r) => r.wants_tshirt).length;
   const tshirtSuccess = rows.filter(
     (r) => r.wants_tshirt && r.payment_status === "DONE",
   ).length;
+  const wantsStay = rows.filter((r) => r.wants_stay).length;
+
+  // ── Age helper ─────────────────────────────────────────────────────────────
+  const calcAge = (dob: string | null): number | null => {
+    if (!dob) return null;
+    const birth = new Date(dob);
+    if (isNaN(birth.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+    return age;
+  };
+
+  // ── Detailed category distribution ─────────────────────────────────────────
+  // For 42K and 21K: Male / Female
+  // For 10K: Junior Male (U18) / Junior Female (U18) / Open Male (18+) / Open Female (18+)
+  // For 5K:  Sub-Junior (U15) / Junior (15-18) / Senior (18+)
+
+  type RaceDetail = {
+    raceName: string;
+    subCats: { label: string; count: number }[];
+  };
+
+  const raceSubCatMap: Record<string, Record<string, number>> = {
+    "42K": {},
+    "21K": {},
+    "10K": {},
+    "5K": {},
+  };
+
+  const normalise = (cat: string | null): string | null => {
+    const c = (cat || "").toLowerCase();
+    if (c.includes("42")) return "42K";
+    if (c.includes("21")) return "21K";
+    if (c.includes("10")) return "10K";
+    if (c.includes("5")) return "5K";
+    return null;
+  };
+
+  rows.forEach((r) => {
+    const race = normalise(r.category);
+    if (!race) return;
+    const gender = (r.gender || "").toLowerCase();
+    const isMale = gender === "male" || gender === "m";
+    const age = calcAge(r.date_of_birth);
+
+    let subCat = "";
+    if (race === "42K" || race === "21K") {
+      subCat = isMale ? "Male" : "Female";
+    } else if (race === "10K") {
+      if (age !== null && age < 18) {
+        subCat = isMale ? "Junior Male (U18)" : "Junior Female (U18)";
+      } else {
+        subCat = isMale ? "Open Male (18+)" : "Open Female (18+)";
+      }
+    } else if (race === "5K") {
+      if (age !== null && age < 15) subCat = "Sub-Junior (U15)";
+      else if (age !== null && age < 18) subCat = "Junior (15-18)";
+      else subCat = "Senior (18+)";
+    }
+
+    if (!subCat) return;
+    raceSubCatMap[race][subCat] = (raceSubCatMap[race][subCat] || 0) + 1;
+  });
+
+  // Define display order for each race
+  const raceDetails: RaceDetail[] = [
+    {
+      raceName: "42K Full Marathon",
+      subCats: ["Male", "Female"].map((l) => ({
+        label: l,
+        count: raceSubCatMap["42K"][l] || 0,
+      })),
+    },
+    {
+      raceName: "21K Half Marathon",
+      subCats: ["Male", "Female"].map((l) => ({
+        label: l,
+        count: raceSubCatMap["21K"][l] || 0,
+      })),
+    },
+    {
+      raceName: "10K Run",
+      subCats: [
+        "Junior Male (U18)",
+        "Junior Female (U18)",
+        "Open Male (18+)",
+        "Open Female (18+)",
+      ].map((l) => ({
+        label: l,
+        count: raceSubCatMap["10K"][l] || 0,
+      })),
+    },
+    {
+      raceName: "5K Run",
+      subCats: ["Sub-Junior (U15)", "Junior (15-18)", "Senior (18+)"].map(
+        (l) => ({
+          label: l,
+          count: raceSubCatMap["5K"][l] || 0,
+        }),
+      ),
+    },
+  ];
 
   // City breakdown
   const cityMap: Record<
@@ -149,31 +254,6 @@ export default function MarathonDashboard() {
     tried: sizeMap[s]?.tried || 0,
     success: sizeMap[s]?.success || 0,
   }));
-
-  // Category breakdown
-  const catMap: Record<string, { tried: number; success: number }> = {};
-  rows.forEach((r) => {
-    const c = r.category || "Unknown";
-    if (!catMap[c]) catMap[c] = { tried: 0, success: 0 };
-    catMap[c].tried += 1;
-    if (r.payment_status === "DONE") {
-      catMap[c].success += 1;
-    }
-  });
-  const catData = Object.entries(catMap)
-    .sort((a, b) => b[1].tried - a[1].tried)
-    .map(([name, { tried, success }]) => ({ name, tried, success }));
-
-  // Gender breakdown
-  const genderMap: Record<string, { tried: number; success: number }> = {};
-  rows.forEach((r) => {
-    const g = r.gender || "Unknown";
-    if (!genderMap[g]) genderMap[g] = { tried: 0, success: 0 };
-    genderMap[g].tried += 1;
-    if (r.payment_status === "DONE") {
-      genderMap[g].success += 1;
-    }
-  });
 
   // Daily registration trend
   const dayMap: Record<
@@ -259,6 +339,12 @@ export default function MarathonDashboard() {
           value={tshirtSuccess}
           color="text-green-600"
           bg="bg-green-100"
+        />
+        <StatCard
+          label="Wants Stay"
+          value={wantsStay}
+          color="text-purple-600"
+          bg="bg-purple-100"
         />
       </div>
 
@@ -401,7 +487,7 @@ export default function MarathonDashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Category breakdown */}
+        {/* Category breakdown — detailed with gender/age sub-groups */}
         <div className="flex-1 min-w-[200px] bg-white rounded-2xl p-5 shadow-sm border border-gray-200 overflow-auto">
           <p className="m-0 mb-3.5 text-xs font-semibold text-gray-500 tracking-wider uppercase">
             By Category
@@ -410,68 +496,46 @@ export default function MarathonDashboard() {
             <thead>
               <tr>
                 <th className="text-left text-gray-500 text-xs uppercase pb-2">
-                  Category
+                  Race / Sub-category
                 </th>
                 <th className="text-right text-gray-500 text-xs uppercase pb-2">
-                  Tried
-                </th>
-                <th className="text-right text-gray-500 text-xs uppercase pb-2">
-                  Success
+                  Count
                 </th>
               </tr>
             </thead>
             <tbody>
-              {catData.map((r) => (
-                <tr key={r.name} className="border-t border-gray-200">
-                  <td className="py-2 font-medium">{r.name}</td>
-                  <td className="text-right">
-                    <span className="bg-blue-100 text-blue-600 rounded-md px-2 py-0.5 font-semibold text-xs">
-                      {fmt(r.tried)}
-                    </span>
-                  </td>
-                  <td className="text-right">
-                    <span className="bg-green-100 text-green-600 rounded-md px-2 py-0.5 font-semibold text-xs">
-                      {fmt(r.success)}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+              {raceDetails.map((race) => {
+                const raceTotal = race.subCats.reduce((s, c) => s + c.count, 0);
+                return (
+                  <>
+                    <tr
+                      key={race.raceName}
+                      className="border-t-2 border-gray-300"
+                    >
+                      <td className="py-2 font-bold text-gray-800" colSpan={2}>
+                        {race.raceName}
+                        <span className="ml-2 text-xs font-normal text-gray-400">
+                          total: {fmt(raceTotal)}
+                        </span>
+                      </td>
+                    </tr>
+                    {race.subCats.map((sub) => (
+                      <tr key={sub.label} className="border-t border-gray-100">
+                        <td className="py-1.5 pl-4 text-gray-600">
+                          {sub.label}
+                        </td>
+                        <td className="text-right">
+                          <span className="bg-blue-50 text-blue-600 rounded-md px-2 py-0.5 font-semibold text-xs">
+                            {fmt(sub.count)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </>
+                );
+              })}
             </tbody>
           </table>
-        </div>
-
-        {/* Gender breakdown */}
-        <div className="flex-1 min-w-[200px] bg-white rounded-2xl p-5 shadow-sm border border-gray-200">
-          <p className="m-0 mb-3.5 text-xs font-semibold text-gray-500 tracking-wider uppercase">
-            By Gender
-          </p>
-          <div className="flex flex-col gap-3 mt-1">
-            {Object.entries(genderMap).map(([g, { tried, success }]) => {
-              const pct = tried > 0 ? Math.round((success / tried) * 100) : 0;
-              const colorClass =
-                g === "Male"
-                  ? "bg-blue-600"
-                  : g === "Female"
-                    ? "bg-pink-600"
-                    : "bg-teal-600";
-              return (
-                <div key={g}>
-                  <div className="flex justify-between mb-1 text-sm">
-                    <span className="font-medium">{g}</span>
-                    <span className="text-gray-500">
-                      {fmt(success)} / {fmt(tried)} ({pct}%)
-                    </span>
-                  </div>
-                  <div className="h-2 bg-gray-100 rounded-full">
-                    <div
-                      className={`h-2 ${colorClass} rounded-full transition-all duration-600`}
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>
