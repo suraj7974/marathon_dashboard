@@ -106,14 +106,23 @@ export function getSubCategory(
   return null;
 }
 
+// Universal BIB range — valid for any category
+export const UNIVERSAL_BIB_RANGE: BibRange = { start: 2000, end: 2700 };
+
 /**
- * Validate a BIB number against the expected sub-category range
+ * Validate a BIB number against the expected sub-category range.
+ * BIBs in the universal range (2000–2700) are always valid regardless of category.
  */
 export function validateBibNumber(
   bibNumber: number,
   race: keyof Categories,
   subCategory: string,
-): { valid: boolean; expectedRange?: BibRange } {
+): { valid: boolean; expectedRange?: BibRange; universal?: boolean } {
+  // Universal BIB range — always valid for any participant
+  if (bibNumber >= UNIVERSAL_BIB_RANGE.start && bibNumber <= UNIVERSAL_BIB_RANGE.end) {
+    return { valid: true, universal: true };
+  }
+
   const raceCategories = CATEGORIES[race];
   if (!raceCategories) return { valid: false };
 
