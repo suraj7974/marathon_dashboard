@@ -118,14 +118,14 @@ export default function MarathonDashboard() {
 
   type RaceDetail = {
     raceName: string;
-    subCats: { label: string; count: number }[];
+    subCats: { label: string; count: number; paid: number }[];
   };
 
-  const raceSubCatMap: Record<string, Record<string, number>> = {
+  const raceSubCatMap: Record<string, Record<string, { count: number; paid: number }>> = {
     "42K": {},
     "21K": {},
     "10K": {},
-    "5K": {},
+    "5K":  {},
   };
 
   const normalise = (cat: string | null): string | null => {
@@ -160,7 +160,12 @@ export default function MarathonDashboard() {
     }
 
     if (!subCat) return;
-    raceSubCatMap[race][subCat] = (raceSubCatMap[race][subCat] || 0) + 1;
+    const isPaid = r.payment_status === "DONE";
+    if (!raceSubCatMap[race][subCat]) {
+      raceSubCatMap[race][subCat] = { count: 0, paid: 0 };
+    }
+    raceSubCatMap[race][subCat].count += 1;
+    if (isPaid) raceSubCatMap[race][subCat].paid += 1;
   });
 
   // Define display order for each race
@@ -169,14 +174,16 @@ export default function MarathonDashboard() {
       raceName: "42K Full Marathon",
       subCats: ["Male", "Female"].map((l) => ({
         label: l,
-        count: raceSubCatMap["42K"][l] || 0,
+        count: raceSubCatMap["42K"][l]?.count || 0,
+        paid: raceSubCatMap["42K"][l]?.paid || 0,
       })),
     },
     {
       raceName: "21K Half Marathon",
       subCats: ["Male", "Female"].map((l) => ({
         label: l,
-        count: raceSubCatMap["21K"][l] || 0,
+        count: raceSubCatMap["21K"][l]?.count || 0,
+        paid: raceSubCatMap["21K"][l]?.paid || 0,
       })),
     },
     {
@@ -188,7 +195,8 @@ export default function MarathonDashboard() {
         "Open Female (18+)",
       ].map((l) => ({
         label: l,
-        count: raceSubCatMap["10K"][l] || 0,
+        count: raceSubCatMap["10K"][l]?.count || 0,
+        paid: raceSubCatMap["10K"][l]?.paid || 0,
       })),
     },
     {
@@ -196,7 +204,8 @@ export default function MarathonDashboard() {
       subCats: ["Sub-Junior (U15)", "Junior (15-18)", "Senior (18+)"].map(
         (l) => ({
           label: l,
-          count: raceSubCatMap["5K"][l] || 0,
+          count: raceSubCatMap["5K"][l]?.count || 0,
+          paid: raceSubCatMap["5K"][l]?.paid || 0,
         }),
       ),
     },
@@ -506,6 +515,7 @@ export default function MarathonDashboard() {
             <tbody>
               {raceDetails.map((race) => {
                 const raceTotal = race.subCats.reduce((s, c) => s + c.count, 0);
+                const racePaid = race.subCats.reduce((s, c) => s + c.paid, 0);
                 return (
                   <>
                     <tr
@@ -515,7 +525,8 @@ export default function MarathonDashboard() {
                       <td className="py-2 font-bold text-gray-800" colSpan={2}>
                         {race.raceName}
                         <span className="ml-2 text-xs font-normal text-gray-400">
-                          total: {fmt(raceTotal)}
+                          total: {fmt(raceTotal)}{" "}
+                          <span className="text-green-600">({fmt(racePaid)})</span>
                         </span>
                       </td>
                     </tr>
@@ -527,6 +538,9 @@ export default function MarathonDashboard() {
                         <td className="text-right">
                           <span className="bg-blue-50 text-blue-600 rounded-md px-2 py-0.5 font-semibold text-xs">
                             {fmt(sub.count)}
+                          </span>{" "}
+                          <span className="text-green-600 text-xs font-semibold">
+                            ({fmt(sub.paid)})
                           </span>
                         </td>
                       </tr>
