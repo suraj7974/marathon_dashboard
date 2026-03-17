@@ -325,14 +325,12 @@ const OpenCategoryVerification = () => {
       return;
     }
 
-    // Warn if bib validation failed but allow override
+    // Block if bib is outside the expected range (universal range 2000-2700 is always valid)
     if (bibValidation && !bibValidation.valid) {
       const range = bibValidation.expectedRange;
-      const rangeText = range ? ` (expected ${range.start}–${range.end})` : "";
-      const proceed = window.confirm(
-        `Warning: BIB #${bibNum} is outside the expected range for "${bibValidation.subCategory}"${rangeText}.\n\nDo you still want to assign it?`,
-      );
-      if (!proceed) return;
+      const rangeText = range ? ` Expected range: ${range.start}–${range.end}.` : "";
+      setError(`BIB #${bibNum} is outside the allowed range for "${bibValidation.subCategory}".${rangeText} Use a BIB in the correct range or the universal range (2000–2700).`);
+      return;
     }
 
     setAssigningBib(true);
