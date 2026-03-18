@@ -18,8 +18,6 @@ import {
   ShieldCheck,
   Shirt,
   Users,
-  Eye,
-  MapPin,
   Lock,
   BarChart3,
   ShoppingCart,
@@ -124,13 +122,13 @@ const Login = () => {
     }
   };
 
-  const handleViewDetails = () => {
-    navigate("/view-details");
-  };
+  // const handleViewDetails = () => {
+  //   navigate("/view-details");
+  // };
 
-  const handleidstaysearch = () => {
-    navigate("/view-venue");
-  };
+  // const handleidstaysearch = () => {
+  //   navigate("/view-venue");
+  // };
 
   const loginSections = [
     {
@@ -184,18 +182,18 @@ const Login = () => {
     },
   ];
 
-  const quickActions = [
-    {
-      onClick: handleidstaysearch,
-      label: "View Venue Details",
-      icon: MapPin,
-    },
-    {
-      onClick: handleViewDetails,
-      label: "View Participant",
-      icon: Eye,
-    },
-  ];
+  // const quickActions = [
+  //   {
+  //     onClick: handleidstaysearch,
+  //     label: "View Venue Details",
+  //     icon: MapPin,
+  //   },
+  //   {
+  //     onClick: handleViewDetails,
+  //     label: "View Participant",
+  //     icon: Eye,
+  //   },
+  // ];
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
@@ -258,7 +256,7 @@ const Login = () => {
           </div>
 
           {/* Quick Actions */}
-          <div className="pt-4 border-t border-border/50">
+          {/*<div className="pt-4 border-t border-border/50">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-3 font-medium">
               Quick Actions
             </p>
@@ -275,7 +273,7 @@ const Login = () => {
                 </Button>
               ))}
             </div>
-          </div>
+          </div>*/}
         </CardContent>
       </Card>
 
