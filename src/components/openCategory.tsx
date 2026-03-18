@@ -30,6 +30,8 @@ import {
   getSubCategory,
   validateBibNumber,
   CATEGORIES,
+  UNIVERSAL_BIB_42K_21K,
+  UNIVERSAL_BIB_10K,
 } from "../lib/bib-validator";
 
 const SCHEMA = "bastar_marathon";
@@ -404,10 +406,21 @@ const OpenCategoryVerification = () => {
       ? getSubCategory(participantRace, participant.gender || "", participant.city || "", participantAge)
       : null;
 
-  const getBibRangeInfo = () => {
-    if (!participantRace || !participantSubCategory) return null;
+  const getBibRangeInfo = (): { subCategoryRange: { start: number; end: number } | null; universalRange: { start: number; end: number } | null } => {
+    if (!participantRace || !participantSubCategory) return { subCategoryRange: null, universalRange: null };
+    
     const ranges = CATEGORIES[participantRace];
-    return ranges?.[participantSubCategory] ?? null;
+    const subCategoryRange = ranges?.[participantSubCategory] ?? null;
+    
+    // Determine universal range based on race
+    let universalRange = null;
+    if (participantRace === "42K" || participantRace === "21K") {
+      universalRange = UNIVERSAL_BIB_42K_21K;
+    } else if (participantRace === "10K") {
+      universalRange = UNIVERSAL_BIB_10K;
+    }
+    
+    return { subCategoryRange, universalRange };
   };
 
   return (
@@ -747,9 +760,14 @@ const OpenCategoryVerification = () => {
                                       {participant.bib_number ? `#${participant.bib_number}` : "Not Assigned"}
                                     </div>
                                     {/* BIB range hint */}
-                                    {getBibRangeInfo() && (
+                                    {getBibRangeInfo().subCategoryRange && (
                                       <div className="text-xs text-gray-500 mt-0.5">
-                                        Expected range: {getBibRangeInfo()!.start}–{getBibRangeInfo()!.end}
+                                        Expected range: {getBibRangeInfo().subCategoryRange!.start}–{getBibRangeInfo().subCategoryRange!.end}
+                                        {getBibRangeInfo().universalRange && (
+                                          <span className="text-green-600">
+                                            {" "}or {getBibRangeInfo().universalRange!.start}–{getBibRangeInfo().universalRange!.end} (Universal)
+                                          </span>
+                                        )}
                                       </div>
                                     )}
                                   </div>
