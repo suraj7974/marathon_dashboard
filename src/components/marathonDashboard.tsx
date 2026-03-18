@@ -97,7 +97,9 @@ export default function MarathonDashboard() {
   const tshirtSuccess = rows.filter(
     (r) => r.wants_tshirt && r.payment_status === "DONE",
   ).length;
-  const wantsStay = rows.filter((r) => r.wants_stay).length;
+  const wantsStay = rows.filter(
+    (r) => r.wants_stay && r.payment_status === "DONE",
+  ).length;
 
   // ── Age helper ─────────────────────────────────────────────────────────────
   const calcAge = (dob: string | null): number | null => {
