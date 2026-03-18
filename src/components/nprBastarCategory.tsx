@@ -87,6 +87,7 @@ const PaymentAndVerification = () => {
     subCategory: string | null;
     expectedRange?: { start: number; end: number };
     universal?: boolean;
+    race?: string;
   } | null>(null);
 
   const fetchParticipantDetails = async (value: string) => {
@@ -403,7 +404,7 @@ const PaymentAndVerification = () => {
     if (!subCat) return;
 
     const result = validateBibNumber(bibNum, race, subCat);
-    setBibValidation({ valid: result.valid, subCategory: subCat, expectedRange: result.expectedRange, universal: result.universal });
+    setBibValidation({ valid: result.valid, subCategory: subCat, expectedRange: result.expectedRange, universal: result.universal, race });
   };
 
   const handleAssignBib = async () => {
@@ -960,7 +961,11 @@ const PaymentAndVerification = () => {
                                       )}
                                       {bibValidation.valid
                                         ? bibValidation.universal
-                                          ? `Universal BIB (2000–2700) — valid for any category`
+                                          ? bibValidation.race === "42K" || bibValidation.race === "21K"
+                                            ? `Universal BIB (2000–2700) — valid for 42K/21K`
+                                            : bibValidation.race === "10K"
+                                            ? `Universal BIB (6000–7000) — valid for 10K`
+                                            : `Universal BIB`
                                           : `Valid BIB for ${bibValidation.subCategory}`
                                         : `BIB outside range for ${bibValidation.subCategory}${bibValidation.expectedRange ? ` (${bibValidation.expectedRange.start}–${bibValidation.expectedRange.end})` : ""}`}
                                     </div>

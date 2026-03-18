@@ -23,13 +23,13 @@ export const CATEGORIES: Categories = {
     "Bastar Female": { start: 1201, end: 1400 },
   },
   "10K": {
-    "Junior Male (U18)": { start: 7000, end: 7199 },
-    "Junior Female (U18)": { start: 7300, end: 7499 },
-    "Open Male (18+)": { start: 7600, end: 8219 },
-    "Open Female (18+)": { start: 8320, end: 8939 },
+    "Junior Male (U18)": { start: 7000, end: 7399 },
+    "Junior Female (U18)": { start: 7400, end: 7521 },
+    "Open Male (18+)": { start: 7600, end: 8400 },
+    "Open Female (18+)": { start: 8401, end: 8701 },
   },
   "5K": {
-    "Sub-Junior (U15)": { start: 9000, end: 9299 },
+    "Sub-Junior (U15)": { start: 9000, end: 9200 },
     "Junior (15-18)": { start: 9400, end: 9699 },
     "Senior (18+)": { start: 9800, end: 11999 },
   },
@@ -62,7 +62,9 @@ export function normaliseRace(category: string): keyof Categories | null {
 /**
  * Calculate age from a date-of-birth string/Date as of today
  */
-export function calculateAge(dob: string | Date | null | undefined): number | null {
+export function calculateAge(
+  dob: string | Date | null | undefined,
+): number | null {
   if (!dob) return null;
   const birth = new Date(dob);
   if (isNaN(birth.getTime())) return null;
@@ -106,20 +108,35 @@ export function getSubCategory(
   return null;
 }
 
-// Universal BIB range — valid for any category
-export const UNIVERSAL_BIB_RANGE: BibRange = { start: 2000, end: 2700 };
+// Universal BIB ranges — race-specific
+export const UNIVERSAL_BIB_42K_21K: BibRange = { start: 2000, end: 2700 }; // 42K and 21K only
+export const UNIVERSAL_BIB_10K: BibRange = { start: 6000, end: 7000 }; // 10K only
 
 /**
  * Validate a BIB number against the expected sub-category range.
- * BIBs in the universal range (2000–2700) are always valid regardless of category.
+ * Universal BIBs:
+ *  - 2000–2700: valid only for 42K and 21K
+ *  - 6000–7000: valid only for 10K
  */
 export function validateBibNumber(
   bibNumber: number,
   race: keyof Categories,
   subCategory: string,
 ): { valid: boolean; expectedRange?: BibRange; universal?: boolean } {
-  // Universal BIB range — always valid for any participant
-  if (bibNumber >= UNIVERSAL_BIB_RANGE.start && bibNumber <= UNIVERSAL_BIB_RANGE.end) {
+  // Check race-specific universal ranges
+  if (
+    (race === "42K" || race === "21K") &&
+    bibNumber >= UNIVERSAL_BIB_42K_21K.start &&
+    bibNumber <= UNIVERSAL_BIB_42K_21K.end
+  ) {
+    return { valid: true, universal: true };
+  }
+
+  if (
+    race === "10K" &&
+    bibNumber >= UNIVERSAL_BIB_10K.start &&
+    bibNumber <= UNIVERSAL_BIB_10K.end
+  ) {
     return { valid: true, universal: true };
   }
 
