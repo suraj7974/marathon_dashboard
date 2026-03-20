@@ -20,7 +20,6 @@ import {
   ShoppingBag,
   Plus,
   Calendar,
-  AlertCircle,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { logEvent, LogEvents } from "../lib/logger";
@@ -30,10 +29,6 @@ import {
   calculateAge,
   normaliseRace,
   getSubCategory,
-  validateBibNumber,
-  CATEGORIES,
-  UNIVERSAL_BIB_42K_21K,
-  UNIVERSAL_BIB_10K,
 } from "../lib/bib-validator";
 
 const SCHEMA = "bastar_marathon";
@@ -84,13 +79,6 @@ const PaymentAndVerification = () => {
   const [newBibNumber, setNewBibNumber] = useState("");
   const [assigningBib, setAssigningBib] = useState(false);
   const [failingVerification, setFailingVerification] = useState(false);
-  const [bibValidation, setBibValidation] = useState<{
-    valid: boolean;
-    subCategory: string | null;
-    expectedRange?: { start: number; end: number };
-    universal?: boolean;
-    race?: string;
-  } | null>(null);
 
   const fetchParticipantDetails = async (value: string) => {
     setLoading(true);
@@ -100,7 +88,6 @@ const PaymentAndVerification = () => {
     setParticipant(null);
     setMultipleResults([]);
     setNewBibNumber("");
-    setBibValidation(null);
 
     try {
       let data: ExtendedParticipant[] | null = null;
@@ -391,22 +378,6 @@ const PaymentAndVerification = () => {
 
   const handleBibInputChange = (value: string) => {
     setNewBibNumber(value.replace(/\D/g, ""));
-    setBibValidation(null);
-
-    if (!participant || !value) return;
-
-    const bibNum = parseInt(value, 10);
-    if (isNaN(bibNum)) return;
-
-    const race = normaliseRace(participant.category || "");
-    if (!race) return;
-
-    const age = calculateAge(participant.date_of_birth);
-    const subCat = getSubCategory(race, participant.gender || "", participant.city || "", age);
-    if (!subCat) return;
-
-    const result = validateBibNumber(bibNum, race, subCat);
-    setBibValidation({ valid: result.valid, subCategory: subCat, expectedRange: result.expectedRange, universal: result.universal, race });
   };
 
   const handleAssignBib = async () => {
@@ -415,14 +386,6 @@ const PaymentAndVerification = () => {
     const bibNum = parseInt(newBibNumber, 10);
     if (isNaN(bibNum)) {
       setError("Please enter a valid numeric BIB number.");
-      return;
-    }
-
-    // Block if bib is outside the expected range (universal range 2000-2700 is always valid)
-    if (bibValidation && !bibValidation.valid) {
-      const range = bibValidation.expectedRange;
-      const rangeText = range ? ` Expected range: ${range.start}–${range.end}.` : "";
-      setError(`BIB #${bibNum} is outside the allowed range for "${bibValidation.subCategory}".${rangeText} Use a BIB in the correct range or the universal range (2000–2700).`);
       return;
     }
 
@@ -442,7 +405,6 @@ const PaymentAndVerification = () => {
       setParticipant((prev) => prev ? { ...prev, bib_number: bibNum } : null);
       setSuccessMessage(`BIB #${bibNum} assigned successfully.`);
       setNewBibNumber("");
-      setBibValidation(null);
 
       logEvent(LogEvents.BIB_ASSIGNED, {
         category: "nprbastarcategory",
@@ -495,30 +457,13 @@ const PaymentAndVerification = () => {
     return isPaymentComplete() && participant.govt_id_verified === true;
   };
 
-  // Age helpers
+  // Age and category helpers for display
   const participantAge = participant ? calculateAge(participant.date_of_birth) : null;
   const participantRace = participant ? normaliseRace(participant.category || "") : null;
   const participantSubCategory =
     participantRace && participant
       ? getSubCategory(participantRace, participant.gender || "", participant.city || "", participantAge)
       : null;
-
-  const getBibRangeInfo = (): { subCategoryRange: { start: number; end: number } | null; universalRange: { start: number; end: number } | null } => {
-    if (!participantRace || !participantSubCategory) return { subCategoryRange: null, universalRange: null };
-    
-    const ranges = CATEGORIES[participantRace];
-    const subCategoryRange = ranges?.[participantSubCategory] ?? null;
-    
-    // Determine universal range based on race
-    let universalRange = null;
-    if (participantRace === "42K" || participantRace === "21K") {
-      universalRange = UNIVERSAL_BIB_42K_21K;
-    } else if (participantRace === "10K") {
-      universalRange = UNIVERSAL_BIB_10K;
-    }
-    
-    return { subCategoryRange, universalRange };
-  };
 
   return (
     <div className="min-h-screen">
@@ -915,16 +860,6 @@ const PaymentAndVerification = () => {
                                     <div className="text-sm font-medium text-orange-700">
                                       {participant.bib_number ? `#${participant.bib_number}` : "Not Assigned"}
                                     </div>
-                                    {getBibRangeInfo().subCategoryRange && (
-                                      <div className="text-xs text-gray-500 mt-0.5">
-                                        Expected range: {getBibRangeInfo().subCategoryRange!.start}–{getBibRangeInfo().subCategoryRange!.end}
-                                        {getBibRangeInfo().universalRange && (
-                                          <span className="text-green-600">
-                                            {" "}or {getBibRangeInfo().universalRange!.start}–{getBibRangeInfo().universalRange!.end} (Universal)
-                                          </span>
-                                        )}
-                                      </div>
-                                    )}
                                   </div>
                                 </div>
                                 <div>
@@ -947,7 +882,7 @@ const PaymentAndVerification = () => {
 
                               {/* Assign BIB Input */}
                               {!participant.bib_number && canDistributeItems() && (
-                                <div className="pt-3 mt-1 border-t border-gray-200 space-y-2">
+                                <div className="pt-3 mt-1 border-t border-gray-200">
                                   <div className="flex items-center gap-2">
                                     <Input
                                       placeholder="Enter BIB #"
@@ -964,30 +899,6 @@ const PaymentAndVerification = () => {
                                       <Plus className="w-4 h-4 mr-1" />Assign
                                     </Button>
                                   </div>
-                                  {bibValidation && newBibNumber && (
-                                    <div
-                                      className={`text-xs flex items-center gap-1.5 px-2 py-1.5 rounded ${
-                                        bibValidation.valid
-                                          ? "bg-green-50 text-green-700 border border-green-200"
-                                          : "bg-red-50 text-red-700 border border-red-200"
-                                      }`}
-                                    >
-                                      {bibValidation.valid ? (
-                                        <Check className="w-3 h-3 shrink-0" />
-                                      ) : (
-                                        <AlertCircle className="w-3 h-3 shrink-0" />
-                                      )}
-                                      {bibValidation.valid
-                                        ? bibValidation.universal
-                                          ? bibValidation.race === "42K" || bibValidation.race === "21K"
-                                            ? `Universal BIB (2000–2700) — valid for 42K/21K`
-                                            : bibValidation.race === "10K"
-                                            ? `Universal BIB (6000–7000) — valid for 10K`
-                                            : `Universal BIB`
-                                          : `Valid BIB for ${bibValidation.subCategory}`
-                                        : `BIB outside range for ${bibValidation.subCategory}${bibValidation.expectedRange ? ` (${bibValidation.expectedRange.start}–${bibValidation.expectedRange.end})` : ""}`}
-                                    </div>
-                                  )}
                                 </div>
                               )}
                             </div>
