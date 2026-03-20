@@ -4,7 +4,8 @@ type Role =
   | "influencers"
   | "inventory"
   | "bulksales"
-  | "reports";
+  | "reports"
+  | "medals";
 
 const PASSWORDS = {
   NprBastar: "1234",
@@ -13,6 +14,7 @@ const PASSWORDS = {
   inventory: "bastar1234",
   bulksales: "1234",
   reports: "bastar1234",
+  medals: "1234",
 };
 
 export const authenticate = (role: Role, password: string): boolean => {

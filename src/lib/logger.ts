@@ -84,6 +84,10 @@ export const LogEvents = {
 
   // Bulk sales
   BULK_SALE_COMPLETED: "BULK_SALE_COMPLETED",
+
+  // Medal distribution
+  MEDAL_ELIGIBLE_MARKED: "MEDAL_ELIGIBLE_MARKED",
+  MEDAL_RECEIVED: "MEDAL_RECEIVED",
 } as const;
 
 export type LogEventType = (typeof LogEvents)[keyof typeof LogEvents];

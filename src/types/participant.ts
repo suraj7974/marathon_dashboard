@@ -19,4 +19,6 @@ export interface Participant {
   bib_number?: number;
   received_tshirt?: boolean;
   govt_id_verified?: boolean;
+  medal_eligible?: boolean;
+  medal_received?: boolean;
 }

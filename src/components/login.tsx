@@ -25,6 +25,7 @@ import {
   Phone,
   Loader2,
   ClipboardList,
+  Medal,
 } from "lucide-react";
 
 type AuthRole =
@@ -33,7 +34,8 @@ type AuthRole =
   | "influencers"
   | "inventory"
   | "bulksales"
-  | "reports";
+  | "reports"
+  | "medals";
 
 const Login = () => {
   const [password, setPassword] = useState("");
@@ -59,6 +61,8 @@ const Login = () => {
       navigate("/inventory");
     } else if (role === "reports") {
       navigate("/reports");
+    } else if (role === "medals") {
+      navigate("/medals");
     } else {
       navigate(`/${role}`);
     }
@@ -179,6 +183,13 @@ const Login = () => {
       icon: ClipboardList,
       description: "View activity reports",
       gradient: "from-teal-500 to-emerald-600",
+    },
+    {
+      role: "medals" as AuthRole,
+      label: "Medal Distribution",
+      icon: Medal,
+      description: "Distribute medals",
+      gradient: "from-yellow-500 to-orange-600",
     },
   ];
 

@@ -15,6 +15,7 @@ import TshirtInventory from "@/components/tshirt-inventory";
 import TshirtBulkSales from "@/components/tshirt-bulk-sales";
 import Reports from "@/components/reports";
 import MarathonDashboard from "./components/marathonDashboard";
+import MedalDistribution from "./components/medal-distribution";
 
 // import "./App.css";
 
@@ -79,6 +80,15 @@ function App() {
           }
         />
         <Route path="/registrationlogs" element={<MarathonDashboard />} />
+
+        <Route
+          path="/medals"
+          element={
+            <ProtectedRoute requiredRole="medals">
+              <MedalDistribution />
+            </ProtectedRoute>
+          }
+        />
 
         <Route path="/view-details" element={<ViewDetails />} />
 
