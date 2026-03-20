@@ -60,6 +60,14 @@ export function normaliseRace(category: string): keyof Categories | null {
 }
 
 /**
+ * Normalize a string by removing diacritics/accents
+ * (e.g., "Kānker" → "Kanker")
+ */
+function normalizeDiacritics(str: string): string {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
  * Calculate age from a date-of-birth string/Date as of today
  */
 export function calculateAge(
@@ -87,7 +95,8 @@ export function getSubCategory(
   const g = gender.trim().toLowerCase();
   const isMale = g === "male" || g === "m";
   const gLabel = isMale ? "Male" : "Female";
-  const isBastar = BASTAR_CITIES.includes(city.trim().toLowerCase());
+  const normalizedCity = normalizeDiacritics(city.trim().toLowerCase());
+  const isBastar = BASTAR_CITIES.includes(normalizedCity);
 
   if (race === "42K" || race === "21K") {
     if (isBastar) return `Bastar ${gLabel}`;

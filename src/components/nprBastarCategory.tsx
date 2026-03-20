@@ -39,7 +39,7 @@ const BASTAR_REGION_CITIES = [
   "narayanpur",
   "bastar",
   "jagdalpur",
-  "Kānker",
+  "kānker",
   "dantewada",
   "kondagaon",
   "bijapur",
