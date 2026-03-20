@@ -39,7 +39,7 @@ const BASTAR_REGION_CITIES = [
   "narayanpur",
   "bastar",
   "jagdalpur",
-  "kanker",
+  "Kānker",
   "dantewada",
   "kondagaon",
   "bijapur",
@@ -67,8 +67,12 @@ const isFromBastar = (city: string): boolean => {
 
 const PaymentAndVerification = () => {
   const [searchValue, setSearchValue] = useState("");
-  const [participant, setParticipant] = useState<ExtendedParticipant | null>(null);
-  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>([]);
+  const [participant, setParticipant] = useState<ExtendedParticipant | null>(
+    null,
+  );
+  const [multipleResults, setMultipleResults] = useState<ExtendedParticipant[]>(
+    [],
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -150,7 +154,9 @@ const PaymentAndVerification = () => {
         setParticipant(data[0]);
       } else {
         setMultipleResults(data);
-        setSuccessMessage(`Found ${data.length} participants. Please select one.`);
+        setSuccessMessage(
+          `Found ${data.length} participants. Please select one.`,
+        );
       }
     } catch (err) {
       console.error("Fetch error:", err);
@@ -198,13 +204,18 @@ const PaymentAndVerification = () => {
       if (participant.bib_number) {
         updateQuery = updateQuery.eq("bib_number", participant.bib_number);
       } else {
-        updateQuery = updateQuery.eq("identification_number", participant.identification_number);
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
       }
 
       const { error } = await updateQuery;
       if (error) throw error;
 
-      setParticipant((prev) => prev ? { ...prev, govt_id_verified: false } : null);
+      setParticipant((prev) =>
+        prev ? { ...prev, govt_id_verified: false } : null,
+      );
       setShowPaymentMethods(false);
 
       logEvent(LogEvents.ID_VERIFICATION_FAILED, {
@@ -236,13 +247,18 @@ const PaymentAndVerification = () => {
       if (participant.bib_number) {
         updateQuery = updateQuery.eq("bib_number", participant.bib_number);
       } else {
-        updateQuery = updateQuery.eq("identification_number", participant.identification_number);
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
       }
 
       const { error } = await updateQuery;
       if (error) throw error;
 
-      setParticipant((prev) => prev ? { ...prev, govt_id_verified: true } : null);
+      setParticipant((prev) =>
+        prev ? { ...prev, govt_id_verified: true } : null,
+      );
       setSuccessMessage("Government ID successfully verified");
 
       logEvent(LogEvents.ID_VERIFIED, {
@@ -274,18 +290,25 @@ const PaymentAndVerification = () => {
       if (participant.bib_number) {
         updateQuery = updateQuery.eq("bib_number", participant.bib_number);
       } else {
-        updateQuery = updateQuery.eq("identification_number", participant.identification_number);
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
       }
 
       const { error } = await updateQuery;
       if (error) throw error;
 
-      setParticipant((prev) => prev ? { ...prev, payment_status: method } : null);
+      setParticipant((prev) =>
+        prev ? { ...prev, payment_status: method } : null,
+      );
       setSuccessMessage(`Payment marked as ${method}`);
       setShowPaymentMethods(false);
 
       logEvent(
-        method === "ONLINE" ? LogEvents.PAYMENT_MARKED_ONLINE : LogEvents.PAYMENT_MARKED_CASH,
+        method === "ONLINE"
+          ? LogEvents.PAYMENT_MARKED_ONLINE
+          : LogEvents.PAYMENT_MARKED_CASH,
         {
           category: "nprbastarcategory",
           participant_id: participant.identification_number,
@@ -328,37 +351,44 @@ const PaymentAndVerification = () => {
             p_xxl: size === "XXL" ? 1 : 0,
           };
 
-          const { data: decrementResult, error: decrementError } = await supabase
-            .schema("bastar_marathon")
-            .rpc("decrement_bulk_inventory", rpcParams);
+          const { data: decrementResult, error: decrementError } =
+            await supabase
+              .schema("bastar_marathon")
+              .rpc("decrement_bulk_inventory", rpcParams);
 
           if (decrementError) {
             console.error("Inventory decrement failed:", decrementError);
           } else if (decrementResult === false) {
-            console.warn(`Inventory reported insufficient stock for size ${size}, but marking as received.`);
+            console.warn(
+              `Inventory reported insufficient stock for size ${size}, but marking as received.`,
+            );
           }
         }
       }
 
-      let updateQuery = supabase
-        .schema(SCHEMA)
-        .from(TABLE)
-        .update(updateData);
+      let updateQuery = supabase.schema(SCHEMA).from(TABLE).update(updateData);
 
       if (participant.bib_number) {
         updateQuery = updateQuery.eq("bib_number", participant.bib_number);
       } else {
-        updateQuery = updateQuery.eq("identification_number", participant.identification_number);
+        updateQuery = updateQuery.eq(
+          "identification_number",
+          participant.identification_number,
+        );
       }
 
       const { error } = await updateQuery;
       if (error) throw error;
 
-      setParticipant((prev) => prev ? { ...prev, [column]: true } : null);
-      setSuccessMessage(`${item === "tshirt" ? "T-shirt" : "Bib"} marked as received`);
+      setParticipant((prev) => (prev ? { ...prev, [column]: true } : null));
+      setSuccessMessage(
+        `${item === "tshirt" ? "T-shirt" : "Bib"} marked as received`,
+      );
 
       logEvent(
-        item === "tshirt" ? LogEvents.TSHIRT_DISTRIBUTED : LogEvents.BIB_DISTRIBUTED,
+        item === "tshirt"
+          ? LogEvents.TSHIRT_DISTRIBUTED
+          : LogEvents.BIB_DISTRIBUTED,
         {
           category: "nprbastarcategory",
           participant_id: participant.identification_number,
@@ -402,7 +432,7 @@ const PaymentAndVerification = () => {
 
       if (error) throw error;
 
-      setParticipant((prev) => prev ? { ...prev, bib_number: bibNum } : null);
+      setParticipant((prev) => (prev ? { ...prev, bib_number: bibNum } : null));
       setSuccessMessage(`BIB #${bibNum} assigned successfully.`);
       setNewBibNumber("");
 
@@ -458,11 +488,20 @@ const PaymentAndVerification = () => {
   };
 
   // Age and category helpers for display
-  const participantAge = participant ? calculateAge(participant.date_of_birth) : null;
-  const participantRace = participant ? normaliseRace(participant.category || "") : null;
+  const participantAge = participant
+    ? calculateAge(participant.date_of_birth)
+    : null;
+  const participantRace = participant
+    ? normaliseRace(participant.category || "")
+    : null;
   const participantSubCategory =
     participantRace && participant
-      ? getSubCategory(participantRace, participant.gender || "", participant.city || "", participantAge)
+      ? getSubCategory(
+          participantRace,
+          participant.gender || "",
+          participant.city || "",
+          participantAge,
+        )
       : null;
 
   return (
@@ -483,7 +522,9 @@ const PaymentAndVerification = () => {
                 placeholder="Enter BIB, Mobile (10 digits) or Unique ID"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleSearch(); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSearch();
+                }}
                 disabled={loading}
                 className="flex-1 h-12"
               />
@@ -492,17 +533,26 @@ const PaymentAndVerification = () => {
                 disabled={loading}
                 className="bg-blue-600 hover:bg-blue-700 px-4 sm:px-8 h-12"
               >
-                {loading ? "Searching..." : (
-                  <><Search className="w-5 h-5 mr-2" />Search</>
+                {loading ? (
+                  "Searching..."
+                ) : (
+                  <>
+                    <Search className="w-5 h-5 mr-2" />
+                    Search
+                  </>
                 )}
               </Button>
             </div>
 
             {/* Error Alert */}
             {error && (
-              <Alert variant="destructive" className="mx-4 sm:mx-8 md:mx-16 lg:mx-32">
+              <Alert
+                variant="destructive"
+                className="mx-4 sm:mx-8 md:mx-16 lg:mx-32"
+              >
                 <AlertDescription className="flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4" />{error}
+                  <AlertTriangle className="w-4 h-4" />
+                  {error}
                 </AlertDescription>
               </Alert>
             )}
@@ -511,7 +561,8 @@ const PaymentAndVerification = () => {
             {successMessage && (
               <Alert className="mx-4 sm:mx-8 md:mx-16 lg:mx-32 bg-green-50 border-green-200">
                 <AlertDescription className="text-green-800 flex items-center gap-2">
-                  <Check className="w-4 h-4" />{successMessage}
+                  <Check className="w-4 h-4" />
+                  {successMessage}
                 </AlertDescription>
               </Alert>
             )}
@@ -519,7 +570,9 @@ const PaymentAndVerification = () => {
             {/* Multiple Results */}
             {multipleResults.length > 0 && !participant && (
               <div className="space-y-4 mx-4 sm:mx-8 md:mx-16 lg:mx-32">
-                <h3 className="text-lg font-semibold text-gray-700">Select a participant:</h3>
+                <h3 className="text-lg font-semibold text-gray-700">
+                  Select a participant:
+                </h3>
                 <div className="grid gap-4">
                   {multipleResults.map((result) => (
                     <div
@@ -531,10 +584,13 @@ const PaymentAndVerification = () => {
                           <User className="w-5 h-5 text-blue-600" />
                         </div>
                         <div>
-                          <div className="font-medium text-lg">{result.full_name}</div>
+                          <div className="font-medium text-lg">
+                            {result.full_name}
+                          </div>
                           <div className="text-sm text-gray-500 flex flex-wrap gap-x-4 gap-y-1">
                             <span className="flex items-center gap-1">
-                              <Tag className="w-3 h-3" /> BIB: {result.bib_number?.toString() || "N/A"}
+                              <Tag className="w-3 h-3" /> BIB:{" "}
+                              {result.bib_number?.toString() || "N/A"}
                             </span>
                             <span className="flex items-center gap-1">
                               <Trophy className="w-3 h-3" /> {result.category}
@@ -545,7 +601,10 @@ const PaymentAndVerification = () => {
                           </div>
                         </div>
                       </div>
-                      <Button onClick={() => handleSelectParticipant(result)} className="bg-blue-600 hover:bg-blue-700 shrink-0">
+                      <Button
+                        onClick={() => handleSelectParticipant(result)}
+                        className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                      >
                         Select
                       </Button>
                     </div>
@@ -561,10 +620,15 @@ const PaymentAndVerification = () => {
                   <div className="bg-amber-50 border border-amber-200 rounded-lg p-6 mx-4 sm:mx-8 md:mx-16 lg:mx-32">
                     <div className="flex items-center gap-3 mb-4">
                       <XCircle className="w-8 h-8 text-amber-600" />
-                      <h3 className="text-lg font-semibold text-amber-800">Please Go to Other Counter</h3>
+                      <h3 className="text-lg font-semibold text-amber-800">
+                        Please Go to Other Counter
+                      </h3>
                     </div>
                     <p className="text-amber-700 mb-4">
-                      This participant is from <strong>{participant.city}</strong> and is not from the Bastar region. Please direct them to the appropriate counter.
+                      This participant is from{" "}
+                      <strong>{participant.city}</strong> and is not from the
+                      Bastar region. Please direct them to the appropriate
+                      counter.
                     </p>
                     <div className="bg-white rounded p-4 border border-amber-200">
                       <div className="grid grid-cols-2 gap-4">
@@ -573,8 +637,12 @@ const PaymentAndVerification = () => {
                           <p className="font-medium">{participant.full_name}</p>
                         </div>
                         <div>
-                          <span className="text-sm text-gray-500">BIB Number</span>
-                          <p className="font-medium">#{participant.bib_number?.toString() || "N/A"}</p>
+                          <span className="text-sm text-gray-500">
+                            BIB Number
+                          </span>
+                          <p className="font-medium">
+                            #{participant.bib_number?.toString() || "N/A"}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -594,9 +662,13 @@ const PaymentAndVerification = () => {
                         <div className="flex items-start gap-3">
                           <Tag className="w-6 h-6 text-amber-500 mt-1 shrink-0" />
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">BIB Number</div>
+                            <div className="text-sm text-gray-500">
+                              BIB Number
+                            </div>
                             <div className="mt-1 text-2xl font-bold text-amber-700">
-                              {participant.bib_number ? `#${participant.bib_number}` : "N/A"}
+                              {participant.bib_number
+                                ? `#${participant.bib_number}`
+                                : "N/A"}
                             </div>
                           </div>
                         </div>
@@ -626,11 +698,16 @@ const PaymentAndVerification = () => {
                                   {participantAge} years
                                 </span>
                               ) : (
-                                <span className="text-gray-400 text-sm">DOB not available</span>
+                                <span className="text-gray-400 text-sm">
+                                  DOB not available
+                                </span>
                               )}
                               {participant.date_of_birth && (
                                 <div className="text-xs text-gray-400 mt-0.5">
-                                  DOB: {new Date(participant.date_of_birth).toLocaleDateString("en-GB")}
+                                  DOB:{" "}
+                                  {new Date(
+                                    participant.date_of_birth,
+                                  ).toLocaleDateString("en-GB")}
                                 </div>
                               )}
                               {participantSubCategory && (
@@ -645,7 +722,9 @@ const PaymentAndVerification = () => {
                         <div className="flex items-start gap-3">
                           <CreditCard className="w-6 h-6 text-red-500 mt-1 shrink-0" />
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">Payment Status</div>
+                            <div className="text-sm text-gray-500">
+                              Payment Status
+                            </div>
                             <div className="mt-1">
                               <span
                                 className={`inline-flex px-3 py-1 rounded-full text-sm font-medium ${
@@ -654,7 +733,8 @@ const PaymentAndVerification = () => {
                                     : "bg-red-100 text-red-800"
                                 }`}
                               >
-                                {participant.payment_status?.toUpperCase() || "PENDING"}
+                                {participant.payment_status?.toUpperCase() ||
+                                  "PENDING"}
                               </span>
                             </div>
                           </div>
@@ -663,16 +743,22 @@ const PaymentAndVerification = () => {
                         <div className="flex items-start gap-3">
                           <FileCheck className="w-6 h-6 text-violet-500 mt-1 shrink-0" />
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">Unique ID</div>
+                            <div className="text-sm text-gray-500">
+                              Unique ID
+                            </div>
                             {participant.identification_number ? (
                               <div className="mt-1">
-                                <div className="font-medium">{participant.identification_number}</div>
+                                <div className="font-medium">
+                                  {participant.identification_number}
+                                </div>
                                 <div className="text-sm text-blue-600">
                                   {getIdType(participant.identification_number)}
                                 </div>
                               </div>
                             ) : (
-                              <div className="mt-1 text-gray-400">No ID provided</div>
+                              <div className="mt-1 text-gray-400">
+                                No ID provided
+                              </div>
                             )}
                           </div>
                         </div>
@@ -680,7 +766,9 @@ const PaymentAndVerification = () => {
                         <div className="flex items-start gap-3">
                           <ShoppingBag className="w-6 h-6 text-teal-500 mt-1 shrink-0" />
                           <div className="flex-1">
-                            <div className="text-sm text-gray-500">T-Shirt Info</div>
+                            <div className="text-sm text-gray-500">
+                              T-Shirt Info
+                            </div>
                             <div className="mt-1">
                               <div className="flex items-center gap-2">
                                 <span
@@ -692,11 +780,12 @@ const PaymentAndVerification = () => {
                                 >
                                   {participant.wants_tshirt ? "Yes" : "No"}
                                 </span>
-                                {participant.wants_tshirt && participant.t_shirt_size && (
-                                  <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                                    Size: {participant.t_shirt_size}
-                                  </span>
-                                )}
+                                {participant.wants_tshirt &&
+                                  participant.t_shirt_size && (
+                                    <span className="inline-flex px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                      Size: {participant.t_shirt_size}
+                                    </span>
+                                  )}
                               </div>
                             </div>
                           </div>
@@ -709,7 +798,9 @@ const PaymentAndVerification = () => {
                       {/* Left: Verification & Payment */}
                       <div className="space-y-6">
                         <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border h-full">
-                          <h3 className="font-medium text-lg mb-4">Verification & Payment</h3>
+                          <h3 className="font-medium text-lg mb-4">
+                            Verification & Payment
+                          </h3>
                           <div className="grid grid-cols-1 gap-4">
                             {/* Government ID */}
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
@@ -718,27 +809,45 @@ const PaymentAndVerification = () => {
                                   <Shield className="w-5 h-5 text-blue-600" />
                                 </div>
                                 <div>
-                                   <div className="font-medium">Government ID Verification</div>
+                                  <div className="font-medium">
+                                    Government ID Verification
+                                  </div>
                                   <div className="text-sm text-gray-500">
-                                    {participant.govt_id_verified ? "Verified" : "Verification Required"}
+                                    {participant.govt_id_verified
+                                      ? "Verified"
+                                      : "Verification Required"}
                                   </div>
                                 </div>
                               </div>
                               <div>
                                 {participant.govt_id_verified === true ? (
                                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    <Check className="w-3 h-3 mr-1" />Verified
+                                    <Check className="w-3 h-3 mr-1" />
+                                    Verified
                                   </span>
                                 ) : participant.govt_id_verified === false ? (
                                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    <XCircle className="w-3 h-3 mr-1" />Failed
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    Failed
                                   </span>
                                 ) : (
                                   <div className="flex gap-2">
-                                    <Button size="sm" onClick={handleVerifyGovtId} disabled={verifyingId} className="bg-blue-600 hover:bg-blue-700">
-                                      {verifyingId ? "Verifying..." : "Verify ID"}
+                                    <Button
+                                      size="sm"
+                                      onClick={handleVerifyGovtId}
+                                      disabled={verifyingId}
+                                      className="bg-blue-600 hover:bg-blue-700"
+                                    >
+                                      {verifyingId
+                                        ? "Verifying..."
+                                        : "Verify ID"}
                                     </Button>
-                                    <Button size="sm" variant="destructive" onClick={handleFailVerification} disabled={failingVerification}>
+                                    <Button
+                                      size="sm"
+                                      variant="destructive"
+                                      onClick={handleFailVerification}
+                                      disabled={failingVerification}
+                                    >
                                       {failingVerification ? "..." : "Fail"}
                                     </Button>
                                   </div>
@@ -756,7 +865,9 @@ const PaymentAndVerification = () => {
                                   <div>
                                     <div className="font-medium">Payment</div>
                                     <div className="text-sm text-gray-500">
-                                      {isPaymentComplete() ? "Completed" : `Due: Rs. ${getPaymentAmount()}`}
+                                      {isPaymentComplete()
+                                        ? "Completed"
+                                        : `Due: Rs. ${getPaymentAmount()}`}
                                     </div>
                                   </div>
                                 </div>
@@ -766,28 +877,63 @@ const PaymentAndVerification = () => {
                                       <Check className="w-3 h-3 mr-1" />
                                       {participant.payment_status?.toUpperCase()}
                                     </span>
-                                  ) : needsPayment() && !showPaymentMethods && participant.govt_id_verified !== false ? (
-                                    <Button size="sm" onClick={() => setShowPaymentMethods(true)} className="bg-green-600 hover:bg-green-700">
+                                  ) : needsPayment() &&
+                                    !showPaymentMethods &&
+                                    participant.govt_id_verified !== false ? (
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        setShowPaymentMethods(true)
+                                      }
+                                      className="bg-green-600 hover:bg-green-700"
+                                    >
                                       Take Payment
                                     </Button>
                                   ) : (
                                     <span className="text-xs text-gray-500 font-medium">
-                                      {participant.payment_status?.toUpperCase() || "PENDING"}
+                                      {participant.payment_status?.toUpperCase() ||
+                                        "PENDING"}
                                     </span>
                                   )}
                                 </div>
                               </div>
                               {showPaymentMethods && (
                                 <div className="pt-3 mt-1 border-t border-gray-200">
-                                  <p className="text-xs text-gray-500 mb-3">Select Method:</p>
+                                  <p className="text-xs text-gray-500 mb-3">
+                                    Select Method:
+                                  </p>
                                   <div className="flex flex-wrap gap-2">
-                                    <Button size="sm" onClick={() => handlePaymentAction("ONLINE")} disabled={processingPayment} className="bg-blue-600 hover:bg-blue-700 flex-1">
-                                      <QrCode className="w-3 h-3 mr-2" />Online
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        handlePaymentAction("ONLINE")
+                                      }
+                                      disabled={processingPayment}
+                                      className="bg-blue-600 hover:bg-blue-700 flex-1"
+                                    >
+                                      <QrCode className="w-3 h-3 mr-2" />
+                                      Online
                                     </Button>
-                                    <Button size="sm" onClick={() => handlePaymentAction("CASH")} disabled={processingPayment} className="bg-green-600 hover:bg-green-700 flex-1">
-                                      <Coins className="w-3 h-3 mr-2" />Cash
+                                    <Button
+                                      size="sm"
+                                      onClick={() =>
+                                        handlePaymentAction("CASH")
+                                      }
+                                      disabled={processingPayment}
+                                      className="bg-green-600 hover:bg-green-700 flex-1"
+                                    >
+                                      <Coins className="w-3 h-3 mr-2" />
+                                      Cash
                                     </Button>
-                                    <Button size="sm" variant="outline" onClick={() => setShowPaymentMethods(false)} disabled={processingPayment} className="shrink-0">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() =>
+                                        setShowPaymentMethods(false)
+                                      }
+                                      disabled={processingPayment}
+                                      className="shrink-0"
+                                    >
                                       Cancel
                                     </Button>
                                   </div>
@@ -807,7 +953,9 @@ const PaymentAndVerification = () => {
                       {/* Right: Distribution */}
                       <div className="space-y-6">
                         <div className="bg-white rounded-lg p-4 sm:p-6 shadow-sm border h-full">
-                          <h3 className="font-medium text-lg mb-4">Tshirt and BIB</h3>
+                          <h3 className="font-medium text-lg mb-4">
+                            Tshirt and BIB
+                          </h3>
                           <div className="grid grid-cols-1 gap-4">
                             {/* T-Shirt */}
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 border rounded-lg bg-gray-50">
@@ -820,9 +968,12 @@ const PaymentAndVerification = () => {
                                   <div className="text-sm text-gray-500">
                                     {participant.wants_tshirt ? (
                                       <span className="font-medium text-purple-700">
-                                        Size: {participant.t_shirt_size || "N/A"}
+                                        Size:{" "}
+                                        {participant.t_shirt_size || "N/A"}
                                       </span>
-                                    ) : "Not Required"}
+                                    ) : (
+                                      "Not Required"
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -830,20 +981,30 @@ const PaymentAndVerification = () => {
                                 {participant.wants_tshirt ? (
                                   participant.received_tshirt ? (
                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                      <Check className="w-3 h-3 mr-1" />Received
+                                      <Check className="w-3 h-3 mr-1" />
+                                      Received
                                     </span>
                                   ) : (
                                     <Button
                                       size="sm"
-                                      onClick={() => handleUpdateItemStatus("tshirt")}
-                                      disabled={!canDistributeItems() || updatingItem === "tshirt"}
+                                      onClick={() =>
+                                        handleUpdateItemStatus("tshirt")
+                                      }
+                                      disabled={
+                                        !canDistributeItems() ||
+                                        updatingItem === "tshirt"
+                                      }
                                       className="bg-purple-600 hover:bg-purple-700"
                                     >
-                                      {updatingItem === "tshirt" ? "Updating..." : "Mark Received"}
+                                      {updatingItem === "tshirt"
+                                        ? "Updating..."
+                                        : "Mark Received"}
                                     </Button>
                                   )
                                 ) : (
-                                  <span className="text-xs text-gray-400">Skipped</span>
+                                  <span className="text-xs text-gray-400">
+                                    Skipped
+                                  </span>
                                 )}
                               </div>
                             </div>
@@ -856,56 +1017,74 @@ const PaymentAndVerification = () => {
                                     <Tag className="w-5 h-5 text-orange-600" />
                                   </div>
                                   <div>
-                                    <div className="font-medium">Bib Number</div>
+                                    <div className="font-medium">
+                                      Bib Number
+                                    </div>
                                     <div className="text-sm font-medium text-orange-700">
-                                      {participant.bib_number ? `#${participant.bib_number}` : "Not Assigned"}
+                                      {participant.bib_number
+                                        ? `#${participant.bib_number}`
+                                        : "Not Assigned"}
                                     </div>
                                   </div>
                                 </div>
                                 <div>
                                   {participant.received_bib ? (
                                     <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                      <Check className="w-3 h-3 mr-1" />Received
+                                      <Check className="w-3 h-3 mr-1" />
+                                      Received
                                     </span>
                                   ) : (
                                     <Button
                                       size="sm"
-                                      onClick={() => handleUpdateItemStatus("bib")}
-                                      disabled={!canDistributeItems() || !participant.bib_number || updatingItem === "bib"}
+                                      onClick={() =>
+                                        handleUpdateItemStatus("bib")
+                                      }
+                                      disabled={
+                                        !canDistributeItems() ||
+                                        !participant.bib_number ||
+                                        updatingItem === "bib"
+                                      }
                                       className="bg-orange-600 hover:bg-orange-700"
                                     >
-                                      {updatingItem === "bib" ? "Updating..." : "Mark Received"}
+                                      {updatingItem === "bib"
+                                        ? "Updating..."
+                                        : "Mark Received"}
                                     </Button>
                                   )}
                                 </div>
                               </div>
 
                               {/* Assign BIB Input */}
-                              {!participant.bib_number && canDistributeItems() && (
-                                <div className="pt-3 mt-1 border-t border-gray-200">
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      placeholder="Enter BIB #"
-                                      className="h-9"
-                                      value={newBibNumber}
-                                      onChange={(e) => handleBibInputChange(e.target.value)}
-                                    />
-                                    <Button
-                                      size="sm"
-                                      className="bg-blue-600 hover:bg-blue-700 shrink-0"
-                                      onClick={handleAssignBib}
-                                      disabled={assigningBib || !newBibNumber}
-                                    >
-                                      <Plus className="w-4 h-4 mr-1" />Assign
-                                    </Button>
+                              {!participant.bib_number &&
+                                canDistributeItems() && (
+                                  <div className="pt-3 mt-1 border-t border-gray-200">
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        placeholder="Enter BIB #"
+                                        className="h-9"
+                                        value={newBibNumber}
+                                        onChange={(e) =>
+                                          handleBibInputChange(e.target.value)
+                                        }
+                                      />
+                                      <Button
+                                        size="sm"
+                                        className="bg-blue-600 hover:bg-blue-700 shrink-0"
+                                        onClick={handleAssignBib}
+                                        disabled={assigningBib || !newBibNumber}
+                                      >
+                                        <Plus className="w-4 h-4 mr-1" />
+                                        Assign
+                                      </Button>
+                                    </div>
                                   </div>
-                                </div>
-                              )}
+                                )}
                             </div>
 
                             {!canDistributeItems() && (
                               <div className="text-xs text-center text-amber-600 bg-amber-50 p-2 rounded border border-amber-100">
-                                Complete verification & payment first to distribute Tshirt and BIB
+                                Complete verification & payment first to
+                                distribute Tshirt and BIB
                               </div>
                             )}
                           </div>
