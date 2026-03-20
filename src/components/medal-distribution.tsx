@@ -395,13 +395,6 @@ const MedalDistribution = () => {
               {is5KCategory ? (
                 // For 5K: Show only Medal Received button (no eligibility check needed)
                 <div className="space-y-3">
-                  <Alert className="border-blue-200 bg-blue-50">
-                    <CheckCircle className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-blue-800">
-                      5K Category: Direct medal distribution (no eligibility
-                      check required)
-                    </AlertDescription>
-                  </Alert>
                   <Button
                     onClick={handleMarkReceived}
                     disabled={
@@ -449,15 +442,6 @@ const MedalDistribution = () => {
                           : "Medal Received"}
                     </Button>
                   </div>
-                  {!participant.medal_eligible && (
-                    <Alert className="border-yellow-200 bg-yellow-50">
-                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                      <AlertDescription className="text-yellow-800">
-                        Participant must be marked as eligible before receiving
-                        medal.
-                      </AlertDescription>
-                    </Alert>
-                  )}
                 </div>
               )}
             </CardContent>
