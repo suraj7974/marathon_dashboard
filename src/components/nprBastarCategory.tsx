@@ -105,7 +105,8 @@ const PaymentAndVerification = () => {
           .schema(SCHEMA)
           .from(TABLE)
           .select("*")
-          .eq("phone", trimmedValue);
+          .eq("phone", trimmedValue)
+          .neq("payment_status", "PENDING");
         data = response.data;
         fetchError = response.error;
       } else if (/^\d+$/.test(trimmedValue)) {
