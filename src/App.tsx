@@ -16,6 +16,7 @@ import TshirtBulkSales from "@/components/tshirt-bulk-sales";
 import Reports from "@/components/reports";
 import MarathonDashboard from "./components/marathonDashboard";
 import MedalDistribution from "./components/medal-distribution";
+import FiveKTenKCounter from "./components/fiveKTenKCounter";
 
 // import "./App.css";
 
@@ -86,6 +87,15 @@ function App() {
           element={
             <ProtectedRoute requiredRole="medals">
               <MedalDistribution />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/5k-10k"
+          element={
+            <ProtectedRoute requiredRole="5k10k">
+              <FiveKTenKCounter />
             </ProtectedRoute>
           }
         />

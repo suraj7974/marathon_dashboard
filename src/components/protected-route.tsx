@@ -16,7 +16,8 @@ interface ProtectedRouteProps {
     | "inventory"
     | "bulksales"
     | "reports"
-    | "medals";
+    | "medals"
+    | "5k10k";
 }
 
 export const ProtectedRoute = ({

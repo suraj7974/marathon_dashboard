@@ -26,6 +26,7 @@ import {
   Loader2,
   ClipboardList,
   Medal,
+  Trophy,
 } from "lucide-react";
 
 type AuthRole =
@@ -35,7 +36,8 @@ type AuthRole =
   | "inventory"
   | "bulksales"
   | "reports"
-  | "medals";
+  | "medals"
+  | "5k10k";
 
 const Login = () => {
   const [password, setPassword] = useState("");
@@ -63,6 +65,8 @@ const Login = () => {
       navigate("/reports");
     } else if (role === "medals") {
       navigate("/medals");
+    } else if (role === "5k10k") {
+      navigate("/5k-10k");
     } else {
       navigate(`/${role}`);
     }
@@ -148,6 +152,13 @@ const Login = () => {
       icon: Shirt,
       description: "payment and distribution",
       gradient: "from-violet-500 to-purple-600",
+    },
+    {
+      role: "5k10k" as AuthRole,
+      label: "5K & 10K Counter",
+      icon: Trophy,
+      description: "All 5K & 10K runners",
+      gradient: "from-cyan-500 to-blue-600",
     },
     // {
     //   role: "kit" as AuthRole,
