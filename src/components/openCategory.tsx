@@ -18,6 +18,7 @@ import {
   ShoppingBag,
   Plus,
   Calendar,
+  Users2,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { logEvent, LogEvents } from "../lib/logger";
@@ -571,6 +572,13 @@ const OpenCategoryVerification = () => {
                           label="City"
                           value={participant.city || "N/A"}
                           iconColor="text-orange-500"
+                        />
+
+                        <ParticipantDetailItem
+                          icon={Users2}
+                          label="Gender"
+                          value={participant.gender || "N/A"}
+                          iconColor="text-pink-500"
                         />
 
                         <ParticipantDetailItem

@@ -590,6 +590,12 @@ const FiveKTenKCounter = () => {
                   iconColor="text-red-600"
                 />
                 <ParticipantDetailItem
+                  icon={User}
+                  label="Gender"
+                  value={participant.gender}
+                  iconColor="text-pink-600"
+                />
+                <ParticipantDetailItem
                   icon={Calendar}
                   label="Age"
                   value={age !== null ? `${age} years` : null}
